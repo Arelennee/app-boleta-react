@@ -1,8 +1,10 @@
 import pool from "../config/db.js";
+import { generarNumeroBoleta } from "../utils/generarNumeroBoleta.js";
 
 export const crearBoletaProforma = async (req, res) => {
   const connection = await pool.getConnection();
   await connection.beginTransaction();
+  const numeroBoleta = await generarNumeroBoleta();
 
   try {
     const {
@@ -17,7 +19,7 @@ export const crearBoletaProforma = async (req, res) => {
     } = req.body;
 
     const [boletaResult] = await connection.query(
-      "INSERT INTO boleta (tipo, cliente_nombre, cliente_dni, cliente_ruc, empresa_ruc, atendido_por, dni_atiende, subtotal, total, numero_boleta, observaciones) VALUES (?, ?, ?, ?, ?, ?, ?, 0.00, 0.00, null, ?)",
+      "INSERT INTO boleta (tipo, cliente_nombre, cliente_dni, cliente_ruc, empresa_ruc, atendido_por, dni_atiende, subtotal, total, numero_boleta, observaciones) VALUES (?, ?, ?, ?, ?, ?, ?, 0.00, 0.00, ?, ?)",
       [
         "PROFORMA",
         cliente_nombre,
@@ -26,6 +28,7 @@ export const crearBoletaProforma = async (req, res) => {
         empresa_ruc,
         atendido_por,
         dni_atiende,
+        numeroBoleta,
         observaciones || null,
       ]
     );
@@ -73,5 +76,57 @@ export const crearBoletaProforma = async (req, res) => {
       .json({ message: "Error creating the bill", error: e.message });
   } finally {
     connection.release();
+  }
+};
+
+export const obtenerBoletaProforma = async (req, res) => {
+  const { numero_boleta } = req.params;
+
+  try {
+    const [boletaRows] = await pool.query(
+      'SELECT * FROM boleta WHERE numero_boleta = ? AND tipo = "PROFORMA"',
+      [numero_boleta]
+    );
+    if (boletaRows.length === 0) {
+      return res.status(400).json({ message: "Bill not found" });
+    }
+
+    const boleta = boletaRows[0];
+
+    const [equiposRows] = await pool.query(
+      "SELECT be.*, ec.nombre_equipo FROM boleta_equipo be INNER JOIN equipo_catalogo ec ON be.id_equipo_catalogo = ec.id_equipo_catalogo WHERE be.id_boleta = ?",
+      [boleta.id_boleta]
+    );
+
+    let serviciosMap = {};
+    if (equiposRows.length > 0) {
+      const equipoIds = equiposRows.map((eq) => eq.id_boleta_equipo);
+      const [serviciosRows] = await pool.query(
+        "SELECT * FROM boleta_equipo_servicio WHERE id_boleta_equipo IN (?)",
+        [equipoIds]
+      );
+
+      serviciosMap = serviciosRows.reduce((acc, servicio) => {
+        if (!acc[servicio.id_boleta_equipo]) {
+          acc[servicio.id_boleta_equipo] = [];
+        }
+        acc[servicio.id_boleta_equipo].push(servicio);
+        return acc;
+      }, {});
+    }
+
+    const equiposConServicios = equiposRows.map((eq) => ({
+      ...eq,
+      servicios: serviciosMap[eq.id_boleta_equipo] || [],
+    }));
+
+    const boletaCompleta = {
+      ...boleta,
+      equipos: equiposConServicios,
+    };
+    res.json(boletaCompleta);
+  } catch (e) {
+    console.log("An error happend ", e);
+    res.status(500).json({ message: "Internal server error" });
   }
 };

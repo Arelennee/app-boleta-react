@@ -1,8 +1,12 @@
 import { Router } from "express";
-import { crearBoletaProforma } from "../controllers/boletasProforma.controller.js";
+import {
+  crearBoletaProforma,
+  obtenerBoletaProforma,
+} from "../controllers/boletasProforma.controller.js";
 
 const router = Router();
 
-router.post("/boletas-proforma", crearBoletaProforma);
+router.post("/crearBoleta", crearBoletaProforma);
+router.get("/obtenerBoleta/:numero_boleta", obtenerBoletaProforma);
 
 export default router;
