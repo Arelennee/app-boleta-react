@@ -1,5 +1,7 @@
 import pool from "../config/db.js";
+import dotenv from "dotenv";
 import { generarNumeroBoleta } from "../utils/generarNumeroBoleta.js";
+dotenv.config();
 
 export const crearBoletaProforma = async (req, res) => {
   const connection = await pool.getConnection();
@@ -11,7 +13,6 @@ export const crearBoletaProforma = async (req, res) => {
       cliente_nombre,
       cliente_dni,
       cliente_ruc,
-      empresa_ruc,
       atendido_por,
       dni_atiende,
       observaciones,
@@ -25,7 +26,7 @@ export const crearBoletaProforma = async (req, res) => {
         cliente_nombre,
         cliente_dni,
         cliente_ruc || null,
-        empresa_ruc,
+        process.env.RUC,
         atendido_por,
         dni_atiende,
         numeroBoleta,
@@ -78,7 +79,34 @@ export const crearBoletaProforma = async (req, res) => {
     connection.release();
   }
 };
-
+/*
+El estilo de la peticion debe ser asi:
+{
+  "cliente_nombre": "Juan Pérez",
+  "cliente_dni": "12345678",
+  "cliente_ruc": null,
+  "atendido_por": "Carlos Ramírez",
+  "dni_atiende": "87654321",
+  "observaciones": "Cliente solicita servicio rápido",
+  "equipos": [
+    {
+      "id_equipo_catalogo": 1,
+      "descripcion_equipo": "Laptop Lenovo con problemas de encendido",
+      "servicios": [
+        { "nombre_servicio": "Revisión de hardware", "precio_servicio": 50.00 },
+        { "nombre_servicio": "Cambio de batería", "precio_servicio": 120.00 }
+      ]
+    },
+    {
+      "id_equipo_catalogo": 2,
+      "descripcion_equipo": "PC de escritorio con fallas en el sistema operativo",
+      "servicios": [
+        { "nombre_servicio": "Instalación de Windows", "precio_servicio": 80.00 }
+      ]
+    }
+  ]
+}
+*/
 export const obtenerBoletaProforma = async (req, res) => {
   const { numero_boleta } = req.params;
 

@@ -9,8 +9,8 @@ export async function generarNumeroBoleta() {
     let nuevoNumero = 1;
 
     if (rows.length > 0 && rows[0].numero_boleta) {
-      const numeroActual = parseInt(rows[0]).numero_boleta.replace(
-        ("PROF-", ""),
+      const numeroActual = parseInt(
+        rows[0].numero_boleta.replace("PROF-", ""),
         10
       );
       nuevoNumero = numeroActual + 1;
