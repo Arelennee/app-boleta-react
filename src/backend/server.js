@@ -3,6 +3,7 @@ import express, { json } from "express";
 import morgan from "morgan";
 import cors from "cors";
 import boletasProformaRoutes from "./routes/boletasProformas.routes.js";
+import equiposRoutes from "./routes/equipos.routes.js";
 
 dotenv.config();
 const PORT = process.env.PORT;
@@ -13,6 +14,7 @@ app.use(cors());
 app.use(morgan("dev"));
 
 app.use("/api", boletasProformaRoutes);
+app.use("/api", equiposRoutes);
 
 app.listen(PORT, () => {
   console.log("Server running on port: ", PORT);
