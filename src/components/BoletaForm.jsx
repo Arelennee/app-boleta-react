@@ -1,9 +1,10 @@
 // components/BoletaForm.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { crearBoleta } from "../services/boletasServices.js";
-import EquipoForm from "./EquipoForm";
+import obtenerTrabajadores from "../services/trabajadoresServices.js";
+import EquipoForm from "./EquipoForm.jsx";
 
-const BoletaForm = () => {
+const BoletaForm = ({ onSubmit }) => {
   const [formData, setFormData] = useState({
     cliente_nombre: "",
     cliente_dni: "",
@@ -14,11 +15,41 @@ const BoletaForm = () => {
     equipos: [],
   });
 
+  const [trabajadores, setTrabajadores] = useState([]);
+
+  useEffect(() => {
+    const fetchTrabajadores = async () => {
+      try {
+        const data = await obtenerTrabajadores();
+        setTrabajadores(data);
+      } catch (err) {
+        console.error("Error cargando trabajadores:", err);
+      }
+    };
+    fetchTrabajadores();
+  }, []);
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
   };
 
-  // recibe equipo del hijo
+  const handleSelectTrabajador = (e) => {
+    const dniSeleccionado = e.target.value;
+    const trabajador = trabajadores.find((t) => t.dni === dniSeleccionado);
+
+    if (trabajador) {
+      setFormData({
+        ...formData,
+        atendido_por: trabajador.nombre,
+        dni_atiende: trabajador.dni,
+      });
+    }
+  };
+
   const handleAddEquipo = (equipo) => {
     setFormData({
       ...formData,
@@ -29,21 +60,10 @@ const BoletaForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await crearBoleta(formData);
-      alert("Boleta creada correctamente con ID: " + response.id_boleta);
-      // limpiar el form
-      setFormData({
-        cliente_nombre: "",
-        cliente_dni: "",
-        cliente_ruc: "",
-        atendido_por: "",
-        dni_atiende: "",
-        observaciones: "",
-        equipos: [],
-      });
-    } catch (error) {
-      alert("Error al crear la boleta");
-      console.error(error);
+      const result = await crearBoleta(formData);
+      if (onSubmit) onSubmit(result);
+    } catch (err) {
+      console.error("Error creando boleta:", err);
     }
   };
 
@@ -76,6 +96,14 @@ const BoletaForm = () => {
       />
 
       {/* Datos del que atiende */}
+      <select onChange={handleSelectTrabajador} className="border p-2 w-full">
+        <option value="">Seleccionar trabajador</option>
+        {trabajadores.map((trabajador) => (
+          <option key={trabajador.dni} value={trabajador.dni}>
+            {trabajador.nombre} - {trabajador.dni}
+          </option>
+        ))}
+      </select>
       <input
         type="text"
         name="atendido_por"
@@ -83,6 +111,7 @@ const BoletaForm = () => {
         value={formData.atendido_por}
         onChange={handleChange}
         className="border p-2 w-full"
+        readOnly
       />
       <input
         type="text"
@@ -91,6 +120,7 @@ const BoletaForm = () => {
         value={formData.dni_atiende}
         onChange={handleChange}
         className="border p-2 w-full"
+        readOnly
       />
       <textarea
         name="observaciones"
