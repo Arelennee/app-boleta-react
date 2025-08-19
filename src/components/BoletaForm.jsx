@@ -1,5 +1,5 @@
 // components/BoletaForm.jsx
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { crearBoleta } from "../services/boletasServices.js";
 import obtenerTrabajadores from "../services/trabajadoresServices.js";
 import "../textarea.css";
@@ -69,120 +69,137 @@ const BoletaForm = ({ onSubmit }) => {
   };
 
   return (
-    <div className="">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Datos del cliente */}
-        <div className="flex flex-row gap-3 justify-center items-center p-4">
-          <div>
-            <input
-              type="text"
-              name="cliente_nombre"
-              placeholder="Nombre del cliente"
-              value={formData.cliente_nombre}
-              onChange={handleChange}
-              className="border p-2 rounded-lg bg-zinc-100 hover:bg-zinc-50 duration-150 w-full "
-            />
-          </div>
-          <div>
-            <input
-              type="text"
-              name="cliente_dni"
-              placeholder="DNI del cliente"
-              value={formData.cliente_dni}
-              onChange={handleChange}
-              className="border p-2 rounded-lg bg-zinc-100 hover:bg-zinc-50 duration-150 w-full "
-            />
-          </div>
-          <div>
-            <input
-              type="text"
-              name="cliente_ruc"
-              placeholder="RUC del cliente (opcional)"
-              value={formData.cliente_ruc}
-              onChange={handleChange}
-              className="border p-2 rounded-lg bg-zinc-100 hover:bg-zinc-50 duration-150 w-full "
-            />
-          </div>
+    <main>
+      <nav className="flex p-2 items-center justify-center bg-zinc-300">
+        <div className="flex flex-row gap-16">
+          <a href="" className="block bg-purple-500 p-2 rounded-lg">
+            Boleta de Venta
+          </a>
+          <a href="" className="block bg-purple-500 p-2 rounded-lg">
+            Boleta de proforma
+          </a>
         </div>
-        <div className="flex flex-row gap-2.5 justify-center bg-amber-400 p-4">
-          <div className="flex flex-col gap-5">
-            <select
-              onChange={handleSelectTrabajador}
-              className="border p-2 rounded-lg bg-zinc-100 hover:bg-zinc-50 duration-150 w-full "
-            >
-              <option value="">Seleccionar trabajador</option>
-              {trabajadores.map((trabajador) => (
-                <option key={trabajador.dni} value={trabajador.dni}>
-                  {trabajador.nombre} - {trabajador.dni}
-                </option>
-              ))}
-            </select>
-            <input
-              type="text"
-              name="atendido_por"
-              placeholder="Atendido por"
-              value={formData.atendido_por}
-              onChange={handleChange}
-              className="border p-2 rounded-lg bg-zinc-100 hover:bg-zinc-50 duration-150 w-full "
-              readOnly
-            />
-            <input
-              type="text"
-              name="dni_atiende"
-              placeholder="DNI de quien atiende"
-              value={formData.dni_atiende}
-              onChange={handleChange}
-              className="border p-2 rounded-lg bg-zinc-100 hover:bg-zinc-50 duration-150 w-full "
-              readOnly
-            />
-          </div>
-          <div>
-            {/* Datos del que atiende */}
-            <textarea
-              name="observaciones"
-              placeholder="Observaciones"
-              value={formData.observaciones}
-              onChange={handleChange}
-              className="border p-2"
-              id="textAreAutoajustable"
-            />
-          </div>
-        </div>
-
-        {/* Agregar equipos */}
-        <EquipoForm onAddEquipo={handleAddEquipo} />
-
-        {/* Mostrar lista de equipos agregados */}
-        <div className="mt-4">
-          <h3 className="font-semibold">Equipos agregados:</h3>
-          {formData.equipos.length === 0 && <p>No hay equipos agregados.</p>}
-          {formData.equipos.map((eq, index) => (
-            <div key={index} className="border p-2 mt-2">
-              <p>
-                <strong>Equipo ID:</strong> {eq.id_equipo_catalogo}
-              </p>
-              <p>
-                <strong>Descripción:</strong> {eq.descripcion_equipo}
-              </p>
-              <ul className="list-disc pl-5">
-                {eq.servicios.map((srv, idx) => (
-                  <li key={idx}>
-                    {srv.nombre_servicio} - S/. {srv.precio_servicio}
-                  </li>
-                ))}
-              </ul>
+      </nav>
+      <div className="flex items-center justify-center bg-zinc-400">
+        <form onSubmit={handleSubmit} className="space-y-4 bg-zinc-300">
+          {/* Datos del cliente */}
+          <div className="flex flex-row gap-3 justify-center items-center p-4">
+            <div>
+              <input
+                type="text"
+                name="cliente_nombre"
+                placeholder="Nombre del cliente"
+                value={formData.cliente_nombre}
+                onChange={handleChange}
+                className="border p-2 rounded-lg bg-zinc-100 hover:bg-zinc-50 duration-150 w-full "
+              />
             </div>
-          ))}
-        </div>
-
-        <button
-          type="submit"
-          className="bg-green-600 text-white px-4 py-2 rounded"
-        >
-          Crear Boleta
-        </button>
-      </form>
-    </div>
+            <div>
+              <input
+                type="text"
+                name="cliente_dni"
+                placeholder="DNI del cliente"
+                value={formData.cliente_dni}
+                onChange={handleChange}
+                className="border p-2 rounded-lg bg-zinc-100 hover:bg-zinc-50 duration-150 w-full "
+              />
+            </div>
+            <div>
+              <input
+                type="text"
+                name="cliente_ruc"
+                placeholder="RUC del cliente (opcional)"
+                value={formData.cliente_ruc}
+                onChange={handleChange}
+                className="border p-2 rounded-lg bg-zinc-100 hover:bg-zinc-50 duration-150 w-full "
+              />
+            </div>
+          </div>
+          <div className="flex flex-row gap-2.5 justify-center p-3">
+            <div className="flex flex-col flex-4/12 gap-5">
+              <select
+                onChange={handleSelectTrabajador}
+                className="border p-2 rounded-lg bg-zinc-100 hover:bg-zinc-50 duration-150 w-full "
+              >
+                <option value="">Seleccionar trabajador</option>
+                {trabajadores.map((trabajador) => (
+                  <option key={trabajador.dni} value={trabajador.dni}>
+                    {trabajador.nombre} - {trabajador.dni}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                name="atendido_por"
+                placeholder="Atendido por"
+                value={formData.atendido_por}
+                onChange={handleChange}
+                className="border p-2 rounded-lg bg-zinc-100 hover:bg-zinc-50 duration-150 w-full "
+                readOnly
+              />
+              <input
+                type="text"
+                name="dni_atiende"
+                placeholder="DNI de quien atiende"
+                value={formData.dni_atiende}
+                onChange={handleChange}
+                className="border p-2 rounded-lg bg-zinc-100 hover:bg-zinc-50 duration-150 w-full "
+                readOnly
+              />
+            </div>
+            <div className="flex flex-col flex-8/12">
+              {/* Datos del que atiende */}
+              <textarea
+                name="observaciones"
+                placeholder="Observaciones"
+                value={formData.observaciones}
+                onChange={handleChange}
+                className="border p-1 min-h-32"
+                id="textAreAutoajustable"
+              />
+            </div>
+          </div>
+          <div className="flex flex-row gap-2.5">
+            <div className="flex flex-col flex-5/12">
+              {/* Agregar equipos */}
+              <EquipoForm onAddEquipo={handleAddEquipo} />
+            </div>
+            <div className="flex flex-col flex-7/12">
+              {/* Mostrar lista de equipos agregados */}
+              <div className="text-center">
+                <h3 className="font-semibold">Equipos agregados:</h3>
+                {formData.equipos.length === 0 && (
+                  <p>No hay equipos agregados.</p>
+                )}
+                {formData.equipos.map((eq, index) => (
+                  <div key={index} className="border p-2 mt-2">
+                    <p>
+                      <strong>Equipo ID:</strong> {eq.id_equipo_catalogo}
+                    </p>
+                    <p>
+                      <strong>Descripción:</strong> {eq.descripcion_equipo}
+                    </p>
+                    <ul className="list-disc pl-5">
+                      {eq.servicios.map((srv, idx) => (
+                        <li key={idx}>
+                          {srv.nombre_servicio} - S/. {srv.precio_servicio}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <button
+            type="submit"
+            className="bg-green-600 text-white px-4 py-2 rounded"
+          >
+            Crear Boleta
+          </button>
+        </form>
+      </div>
+    </main>
   );
 };
 
