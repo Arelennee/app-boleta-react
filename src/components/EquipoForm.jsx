@@ -1,5 +1,5 @@
 // components/EquipoForm.jsx
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import getEquiposCatalogo from "../services/equiposServices";
 
 const EquipoForm = ({ onAddEquipo }) => {
@@ -51,7 +51,7 @@ const EquipoForm = ({ onAddEquipo }) => {
   };
 
   return (
-    <div className="space-y-4 border p-4 rounded">
+    <div className="space-y-2 p-2.5 rounded">
       {/* Dropdown de catálogo */}
       <select
         value={equipo.id_equipo_catalogo}
@@ -61,11 +61,13 @@ const EquipoForm = ({ onAddEquipo }) => {
         className="border p-2 w-full"
       >
         <option value="">Seleccionar equipo</option>
-        {equiposCatalogo && Array.isArray(equiposCatalogo) && equiposCatalogo.map((eq) => (
-          <option key={eq.id_equipo_catalogo} value={eq.id_equipo_catalogo}>
-            {eq.nombre_equipo}
-          </option>
-        ))}
+        {equiposCatalogo &&
+          Array.isArray(equiposCatalogo) &&
+          equiposCatalogo.map((eq) => (
+            <option key={eq.id_equipo_catalogo} value={eq.id_equipo_catalogo}>
+              {eq.nombre_equipo}
+            </option>
+          ))}
       </select>
 
       {/* Descripción del equipo */}
@@ -99,31 +101,37 @@ const EquipoForm = ({ onAddEquipo }) => {
           }
           className="border p-2 w-full"
         />
-        <button
-          type="button"
-          onClick={handleAddServicio}
-          className="bg-blue-500 text-white px-3 py-1 rounded"
-        >
-          Agregar Servicio
-        </button>
+        <div className="flex flex-row">
+          <div>
+            <button
+              type="button"
+              onClick={handleAddServicio}
+              className="block p-1 bg-cyan-300 rounded-lg cursor-pointer"
+            >
+              Agregar Servicio
+            </button>
+          </div>
+          <div>
+            {/* Lista de servicios agregados */}
+            <ul className="list-disc pl-5">
+              {equipo.servicios.map((srv, index) => (
+                <li key={index}>
+                  {srv.nombre_servicio} - S/. {srv.precio_servicio}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <button
+              type="button"
+              onClick={handleAddEquipo}
+              className="block p-1 bg-green-300 rounded-lg cursor-pointer"
+            >
+              Agregar Equipo
+            </button>
+          </div>
+        </div>
       </div>
-
-      {/* Lista de servicios agregados */}
-      <ul className="list-disc pl-5">
-        {equipo.servicios.map((srv, index) => (
-          <li key={index}>
-            {srv.nombre_servicio} - S/. {srv.precio_servicio}
-          </li>
-        ))}
-      </ul>
-
-      <button
-        type="button"
-        onClick={handleAddEquipo}
-        className="bg-green-500 text-white px-4 py-2 rounded"
-      >
-        Agregar Equipo
-      </button>
     </div>
   );
 };
