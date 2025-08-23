@@ -60,6 +60,19 @@ const BoletaForm = ({ onSubmit }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (
+      !formData.cliente_nombre ||
+      !formData.cliente_dni ||
+      !formData.atendido_por ||
+      !formData.dni_atiende
+    ) {
+      alert("Por favor, complete los campos necesarios");
+    }
+    if (!formData.equipos || formData.equipos.length === 0) {
+      alert(
+        "Debe añadir almenos un equipo y servicio para poder generar la boleta"
+      );
+    }
     try {
       const result = await crearBoleta(formData);
       if (onSubmit) onSubmit(result);

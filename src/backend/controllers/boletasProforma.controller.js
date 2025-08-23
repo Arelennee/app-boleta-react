@@ -1,6 +1,7 @@
 import pool from "../config/db.js";
 import dotenv from "dotenv";
 import { generarNumeroBoleta } from "../utils/generarNumeroBoleta.js";
+import { generarPDFBoleta } from "../utils/pdfGenerator.js";
 dotenv.config();
 
 export const crearBoletaProforma = async (req, res) => {
@@ -18,6 +19,27 @@ export const crearBoletaProforma = async (req, res) => {
       observaciones,
       equipos,
     } = req.body;
+
+    if (!cliente_nombre || !cliente_dni || !atendido_por || !dni_atiende) {
+      return res.status(400).json({ message: "Faltan campos con datos" });
+    }
+    if (!equipos || equipos.length === 0) {
+      res
+        .status(400)
+        .json({ message: "Inlcuya al menos un equipo para generar la boleta" });
+    }
+
+    for (const eq of equipos) {
+      if (
+        !eq.id_equipo_catalogo ||
+        !eq.descripcion_equipo ||
+        !eq.servicios?.length
+      ) {
+        return res
+          .status(400)
+          .json({ message: "Equipos o servicios incompletos" });
+      }
+    }
 
     const [boletaResult] = await connection.query(
       "INSERT INTO boleta (tipo, cliente_nombre, cliente_dni, cliente_ruc, empresa_ruc, atendido_por, dni_atiende, subtotal, total, numero_boleta, observaciones) VALUES (?, ?, ?, ?, ?, ?, ?, 0.00, 0.00, ?, ?)",
@@ -63,11 +85,41 @@ export const crearBoletaProforma = async (req, res) => {
     );
     await connection.commit();
 
+    const boletaData = {
+      id_boleta: boletaId,
+      tipo: "PROFORMA",
+      numero_boleta: numeroBoleta,
+      cliente: {
+        nombre: cliente_nombre,
+        dni: cliente_dni,
+        ruc: cliente_ruc || null,
+      },
+      empresa_ruc: process.env.RUC,
+      atendido_por: {
+        nombre: atendido_por,
+        dni: dni_atiende,
+      },
+      observaciones,
+      subtotal,
+      total,
+      equipos: equipos.map((eq) => ({
+        id_equipo_catalogo: eq.id_equipo_catalogo,
+        descripcion_equipo: eq.descripcion_equipo,
+        servicios: eq.servicios.map((srv) => ({
+          nombre_servicio: srv.nombre_servicio,
+          precio_servicio: srv.precio_servicio,
+        })),
+      })),
+    };
+
+    const pdfPath = await generarPDFBoleta(boletaData);
+
     res.status(200).json({
       message: "Bill Succesfully created",
       id_boleta: boletaId,
       subtotal,
       total,
+      pdfUrl: `pdfs/${numeroBoleta}.pdf`,
     });
   } catch (e) {
     await connection.rollback();
@@ -79,34 +131,8 @@ export const crearBoletaProforma = async (req, res) => {
     connection.release();
   }
 };
-/*
-El estilo de la peticion debe ser asi:
-{
-  "cliente_nombre": "Juan Pérez",
-  "cliente_dni": "12345678",
-  "cliente_ruc": null,
-  "atendido_por": "Carlos Ramírez",
-  "dni_atiende": "87654321",
-  "observaciones": "Cliente solicita servicio rápido",
-  "equipos": [
-    {
-      "id_equipo_catalogo": 1,
-      "descripcion_equipo": "Laptop Lenovo con problemas de encendido",
-      "servicios": [
-        { "nombre_servicio": "Revisión de hardware", "precio_servicio": 50.00 },
-        { "nombre_servicio": "Cambio de batería", "precio_servicio": 120.00 }
-      ]
-    },
-    {
-      "id_equipo_catalogo": 2,
-      "descripcion_equipo": "PC de escritorio con fallas en el sistema operativo",
-      "servicios": [
-        { "nombre_servicio": "Instalación de Windows", "precio_servicio": 80.00 }
-      ]
-    }
-  ]
-}
-*/
+
+//obtencion de la boleta proforma mediante el numero de boleta
 export const obtenerBoletaProforma = async (req, res) => {
   const { numero_boleta } = req.params;
 
