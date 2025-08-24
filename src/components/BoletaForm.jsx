@@ -76,6 +76,10 @@ const BoletaForm = ({ onSubmit }) => {
     try {
       const result = await crearBoleta(formData);
       if (onSubmit) onSubmit(result);
+      if (result?.pdfUrl) {
+        const pdfFullUrl = `http://localhost:3000/${result.pdfUrl}`;
+        window.open(pdfFullUrl, "_blank");
+      }
     } catch (err) {
       console.error("Error creando boleta:", err);
     }
