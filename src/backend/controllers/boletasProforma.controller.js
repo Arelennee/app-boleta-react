@@ -184,3 +184,14 @@ export const obtenerBoletaProforma = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+export const descargarBoletaProforma = async (req, res) => {
+  try {
+    const { numero } = req.params;
+    const pdfPath = `pdf/${numero}.pdf`;
+
+    res.sendFile(pdfPath, { root: process.cwd() });
+  } catch (e) {
+    res.status(500).json({ message: "error al enviar el pdf", e });
+  }
+};

@@ -16,12 +16,12 @@ export const generarPDFBoleta = (boletaData) => {
       doc.moveDown();
 
       doc.fontSize(12).text(`Número: ${boletaData.numero_boleta}`);
-      doc.text(`Cliente : ${boletaData.cliente_nombre}`);
-      if (boletaData.cliente_dni)
-        doc.text(`Dni del Cliente: ${boletaData.cliente_dni}`);
-      if (boletaData.cliente_ruc) doc.text(`RUC: ${boletaData.cliente_ruc}`);
+      doc.text(`Cliente : ${boletaData.cliente.nombre}`);
+      if (boletaData.cliente.dni)
+        doc.text(`Dni del Cliente: ${boletaData.cliente.dni}`);
+      if (boletaData.cliente.ruc) doc.text(`RUC: ${boletaData.cliente.ruc}`);
       doc.text(
-        `Atendido por: ${boletaData.atendido_por} (DNI: ${boletaData.dni_atiende})`
+        `Atendido por: ${boletaData.atendido_por.nombre} (DNI: ${boletaData.atendido_por.dni})`
       );
       if (boletaData.observaciones)
         doc.text(`Observaciones: ${boletaData.observaciones}`);
