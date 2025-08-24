@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 8.4.5, for Linux (x86_64)
+-- MySQL dump 10.13  Distrib 8.4.6, for Linux (x86_64)
 --
 -- Host: localhost    Database: sistema_boletas
 -- ------------------------------------------------------
--- Server version	8.4.5-0ubuntu0.2
+-- Server version	8.4.6-0ubuntu0.25.04.1
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -17,13 +17,6 @@
 
 --
 -- Table structure for table `boleta`
-
-
-CREATE DATABASE IF NOT EXISTS sistema_boletas
-CHARACTER SET utf8mb4
-COLLATE utf8mb4_unicode_ci;
-
-USE sistema_boletas;
 --
 
 DROP TABLE IF EXISTS `boleta`;
@@ -45,19 +38,8 @@ CREATE TABLE `boleta` (
   `observaciones` text COLLATE utf8mb4_unicode_ci,
   PRIMARY KEY (`id_boleta`),
   UNIQUE KEY `numero_boleta` (`numero_boleta`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `boleta`
---
-
-LOCK TABLES `boleta` WRITE;
-/*!40000 ALTER TABLE `boleta` DISABLE KEYS */;
-INSERT INTO `boleta` VALUES (1,'PROFORMA','2025-08-10 20:41:07','Juan Pérez','12345678','20123456789','10293847566','Pedro Gómez','87654321',230.50,230.50,NULL,'Entrega en 3 días');
-/*!40000 ALTER TABLE `boleta` ENABLE KEYS */;
-UNLOCK TABLES;
-
 --
 -- Table structure for table `boleta_detalle_producto`
 --
@@ -104,18 +86,9 @@ CREATE TABLE `boleta_equipo` (
   KEY `id_equipo_catalogo` (`id_equipo_catalogo`),
   CONSTRAINT `boleta_equipo_ibfk_1` FOREIGN KEY (`id_boleta`) REFERENCES `boleta` (`id_boleta`) ON DELETE CASCADE,
   CONSTRAINT `boleta_equipo_ibfk_2` FOREIGN KEY (`id_equipo_catalogo`) REFERENCES `equipo_catalogo` (`id_equipo_catalogo`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
---
--- Dumping data for table `boleta_equipo`
---
-
-LOCK TABLES `boleta_equipo` WRITE;
-/*!40000 ALTER TABLE `boleta_equipo` DISABLE KEYS */;
-INSERT INTO `boleta_equipo` VALUES (1,1,1,'Laptop Lenovo');
-/*!40000 ALTER TABLE `boleta_equipo` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `boleta_equipo_servicio`
@@ -132,19 +105,12 @@ CREATE TABLE `boleta_equipo_servicio` (
   PRIMARY KEY (`id_boleta_equipo_servicio`),
   KEY `id_boleta_equipo` (`id_boleta_equipo`),
   CONSTRAINT `boleta_equipo_servicio_ibfk_1` FOREIGN KEY (`id_boleta_equipo`) REFERENCES `boleta_equipo` (`id_boleta_equipo`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
 -- Dumping data for table `boleta_equipo_servicio`
 --
-
-LOCK TABLES `boleta_equipo_servicio` WRITE;
-/*!40000 ALTER TABLE `boleta_equipo_servicio` DISABLE KEYS */;
-INSERT INTO `boleta_equipo_servicio` VALUES (1,1,'Reparación de pantalla',150.50),(2,1,'Cambio de teclado',80.00);
-/*!40000 ALTER TABLE `boleta_equipo_servicio` ENABLE KEYS */;
-UNLOCK TABLES;
-
 --
 -- Table structure for table `equipo_catalogo`
 --
@@ -163,10 +129,29 @@ CREATE TABLE `equipo_catalogo` (
 -- Dumping data for table `equipo_catalogo`
 --
 
-LOCK TABLES `equipo_catalogo` WRITE;
-/*!40000 ALTER TABLE `equipo_catalogo` DISABLE KEYS */;
-INSERT INTO `equipo_catalogo` VALUES (1,'PC'),(2,'LAPTOP'),(3,'IMPRESORA');
-/*!40000 ALTER TABLE `equipo_catalogo` ENABLE KEYS */;
+--
+-- Table structure for table `trabajadores`
+--
+
+DROP TABLE IF EXISTS `trabajadores`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `trabajadores` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `dni` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `trabajadores`
+--
+
+LOCK TABLES `trabajadores` WRITE;
+/*!40000 ALTER TABLE `trabajadores` DISABLE KEYS */;
+INSERT INTO `trabajadores` VALUES (1,'Alvaro Palomino','60747668');
+/*!40000 ALTER TABLE `trabajadores` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -178,4 +163,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-08-10 20:54:39
+-- Dump completed on 2025-08-24 15:40:28
