@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
+import imagen1 from "./image.js";
 
 export const generarPDFBoleta = (boletaData) => {
   return new Promise((resolve, reject) => {
@@ -8,18 +9,26 @@ export const generarPDFBoleta = (boletaData) => {
       const filename = `${boletaData.numero_boleta}.pdf`;
       const filePath = path.join("pdfs", filename);
 
-      const doc = new PDFDocument();
+      const doc = new PDFDocument({
+        size: "A4",
+        margin: 20,
+      });
       const stream = fs.createWriteStream(filePath);
       doc.pipe(stream);
+      doc.image(imagen1, {
+        width: 225,
+        height: 123.75,
+      });
 
-      doc.fontSize(16).text("Boleta Proforma", { align: "center" });
+      doc.fontSize(16).text("Boleta Proforma", { align: "right" });
       doc.moveDown();
 
       doc.fontSize(12).text(`Número: ${boletaData.numero_boleta}`);
       doc.text(`Cliente : ${boletaData.cliente.nombre}`);
       if (boletaData.cliente.dni)
         doc.text(`Dni del Cliente: ${boletaData.cliente.dni}`);
-      if (boletaData.cliente.ruc) doc.text(`RUC: ${boletaData.cliente.ruc}`);
+      if (boletaData.cliente.ruc)
+        doc.text(`RUC del Cliente: ${boletaData.cliente.ruc}`);
       doc.text(
         `Atendido por: ${boletaData.atendido_por.nombre} (DNI: ${boletaData.atendido_por.dni})`
       );
