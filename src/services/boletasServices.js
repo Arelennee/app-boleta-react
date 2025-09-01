@@ -1,4 +1,5 @@
 const API_URL_CREAR_BOLETA = "http://localhost:3000/api/crearBoleta";
+const API_URL_BUSCAR_BOLETA = "http://localhost:3000/api/buscarBoleta";
 
 export async function crearBoleta(data) {
   try {
@@ -42,6 +43,22 @@ export async function obtenerBoletas() {
     return await res.json();
   } catch (e) {
     console.error("Error al generar la peticion", e);
+    throw e;
+  }
+}
+
+export async function buscarBoletas(query) {
+  try {
+    const res = await fetch(
+      `${API_URL_BUSCAR_BOLETA}?query=${encodeURIComponent(query)}`
+    );
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || "Error al buscar boletas");
+    }
+    return await res.json();
+  } catch (e) {
+    console.error("Error en buscar boleta", e);
     throw e;
   }
 }
