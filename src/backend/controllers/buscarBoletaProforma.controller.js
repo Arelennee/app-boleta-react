@@ -18,7 +18,6 @@ export const buscarBoletasFlex = async (req, res) => {
       (cliente_dni LIKE ? 
       OR cliente_nombre LIKE ? 
       OR numero_boleta LIKE ? 
-      OR cliente_ruc LIKE ? 
       OR total LIKE ?)
     `
     );
