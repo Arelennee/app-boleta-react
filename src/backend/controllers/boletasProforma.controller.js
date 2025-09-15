@@ -83,6 +83,14 @@ export const crearBoletaProforma = async (req, res) => {
       "UPDATE boleta SET subtotal = ?, total = ? WHERE id_boleta = ?",
       [subtotal, total, boletaId]
     );
+
+    // 💡 Paso clave: Obtener la fecha de la base de datos
+    const [boletaFinalResult] = await connection.query(
+      "SELECT fecha_emision FROM boleta WHERE id_boleta = ?",
+      [boletaId]
+    );
+    const fecha_emision = boletaFinalResult[0].fecha_emision;
+
     await connection.commit();
 
     const boletaData = {
@@ -102,6 +110,7 @@ export const crearBoletaProforma = async (req, res) => {
       observaciones,
       subtotal,
       total,
+      fecha_emision, // ✨ La fecha ahora está aquí
       equipos: equipos.map((eq) => ({
         id_equipo_catalogo: eq.id_equipo_catalogo,
         descripcion_equipo: eq.descripcion_equipo,

@@ -98,7 +98,11 @@ const BoletaForm = ({ onSubmit }) => {
         </div>
       </nav>
       <div className="flex items-center justify-center bg-zinc-400">
-        <form onSubmit={handleSubmit} className="space-y-4 bg-zinc-300">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 bg-zinc-300"
+          id="formulario"
+        >
           {/* Datos del cliente */}
           <div className="flex flex-row gap-3 justify-center items-center p-4">
             <div>

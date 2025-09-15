@@ -2,6 +2,8 @@ import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
 import imagen1 from "./image.js";
+import dotenv from "dotenv";
+dotenv.config();
 
 export const generarPDFBoleta = (boletaData) => {
   return new Promise((resolve, reject) => {
@@ -13,44 +15,200 @@ export const generarPDFBoleta = (boletaData) => {
         size: "A4",
         margin: 20,
       });
+
       const stream = fs.createWriteStream(filePath);
       doc.pipe(stream);
-      doc.image(imagen1, {
-        width: 225,
-        height: 123.75,
+
+      // --- Cabecera: Logo y RUC/Boleta ---
+      const startY = doc.y;
+      const docWidth =
+        doc.page.width - doc.page.margins.left - doc.page.margins.right;
+      const logoWidth = 225;
+      const logoHeight = 123.75;
+      const boxWidth = 200;
+      const boxX = doc.page.width - doc.page.margins.right - boxWidth;
+
+      // Logo en la esquina superior izquierda con dimensiones originales
+      doc.image(imagen1, doc.page.margins.left, startY, {
+        width: logoWidth,
+        height: logoHeight,
       });
 
-      doc.fontSize(16).text("Boleta Proforma", { align: "right" });
-      doc.moveDown();
+      // El cuadro de información de la boleta se mueve debajo del logo
+      const boxY = startY + 10;
+      doc.rect(boxX, boxY, boxWidth, 70).stroke();
 
-      doc.fontSize(12).text(`Número: ${boletaData.numero_boleta}`);
-      doc.text(`Cliente : ${boletaData.cliente.nombre}`);
+      // Contenido de la caja
+      doc.fontSize(10).text(`R.U.C ${process.env.RUC}`, boxX, boxY + 5, {
+        width: boxWidth,
+        align: "center",
+      });
+      doc
+        .moveTo(boxX, boxY + 25)
+        .lineTo(boxX + boxWidth, boxY + 25)
+        .stroke();
+
+      doc.fontSize(12).text(boletaData.tipo, boxX, boxY + 30, {
+        width: boxWidth,
+        align: "center",
+      });
+      doc
+        .moveTo(boxX, boxY + 50)
+        .lineTo(boxX + boxWidth, boxY + 50)
+        .stroke();
+
+      doc.fontSize(10).text(`N° ${boletaData.numero_boleta}`, boxX, boxY + 55, {
+        width: boxWidth,
+        align: "center",
+      });
+
+      doc.y = Math.max(doc.y, startY + logoHeight) + 15; // Ajusta el flujo vertical
+
+      // --- Sección de Datos del Cliente, Fecha y Atendido por ---
+      const clienteRectY = doc.y;
+      doc.rect(doc.page.margins.left, clienteRectY, docWidth, 40).stroke();
+
+      const clienteTextX = doc.page.margins.left + 5;
+      const clienteTextY = clienteRectY + 5;
+
+      // Datos del cliente en una sola línea
+      let clienteInfo = `Cliente: ${boletaData.cliente.nombre}`;
       if (boletaData.cliente.dni)
-        doc.text(`Dni del Cliente: ${boletaData.cliente.dni}`);
+        clienteInfo += ` | DNI: ${boletaData.cliente.dni}`;
       if (boletaData.cliente.ruc)
-        doc.text(`RUC del Cliente: ${boletaData.cliente.ruc}`);
-      doc.text(
-        `Atendido por: ${boletaData.atendido_por.nombre} (DNI: ${boletaData.atendido_por.dni})`
-      );
-      if (boletaData.observaciones)
-        doc.text(`Observaciones: ${boletaData.observaciones}`);
-      doc.moveDown();
+        clienteInfo += ` | RUC: ${boletaData.cliente.ruc}`;
+      doc.fontSize(10).text(clienteInfo, clienteTextX, clienteTextY);
 
-      doc.fontSize(14).text("Equipos y servicios");
-      doc.moveDown(0.5);
+      // Fecha de Emisión (nuevo campo)
+      const fechaText = `Fecha: ${boletaData.fecha_emision}`;
+      const fechaWidth = doc.widthOfString(fechaText);
+      const fechaX = docWidth + doc.page.margins.left - fechaWidth - 5;
+      doc.text(fechaText, fechaX, clienteTextY);
+
+      // Información de quien atendió
+      const atendidoPorText = `Atendido por: ${boletaData.atendido_por.nombre} (DNI: ${boletaData.atendido_por.dni})`;
+      doc.text(atendidoPorText, clienteTextX, clienteRectY + 20);
+
+      doc.y = clienteRectY + 40 + 10;
+
+      // --- Sección de Observaciones ---
+      const obsRectY = doc.y;
+      doc.rect(doc.page.margins.left, obsRectY, docWidth, 40).stroke();
+
+      if (boletaData.observaciones) {
+        doc
+          .fontSize(10)
+          .text("Observaciones:", doc.page.margins.left + 5, obsRectY + 5);
+        doc.text(
+          boletaData.observaciones,
+          doc.page.margins.left + 5,
+          obsRectY + 20
+        );
+      } else {
+        doc
+          .fontSize(10)
+          .text("Observaciones: N/A", doc.page.margins.left + 5, obsRectY + 5);
+      }
+      doc.y = obsRectY + 40 + 10;
+
+      // --- Tabla de Equipos y Servicios (Detallada) ---
+      const tableTop = doc.y;
+      const colWidths = [
+        docWidth * 0.4,
+        docWidth * 0.25,
+        docWidth * 0.15,
+        docWidth * 0.2,
+      ];
+      let currentY = tableTop;
       let subtotal = 0;
-      boletaData.equipos.forEach((eq, index) => {
-        doc.fontSize(12).text(`${index + 1}. ${eq.descripcion_equipo}`);
-        eq.servicios.forEach((srv) => {
-          doc.text(`   - ${srv.nombre_servicio}: S/ ${srv.precio_servicio}`);
-          subtotal += parseFloat(srv.precio_servicio);
+
+      // Encabezados de la tabla
+      doc
+        .fontSize(10)
+        .text("Descripción de Equipo", doc.page.margins.left + 5, currentY, {
+          width: colWidths[0],
+        })
+        .text("Servicio", doc.page.margins.left + colWidths[0] + 5, currentY, {
+          width: colWidths[1],
+        })
+        .text(
+          "Precio Unitario",
+          doc.page.margins.left + colWidths[0] + colWidths[1] + 5,
+          currentY,
+          { width: colWidths[2] }
+        )
+        .text(
+          "Total",
+          doc.page.margins.left +
+            colWidths[0] +
+            colWidths[1] +
+            colWidths[2] +
+            5,
+          currentY,
+          { width: colWidths[3] }
+        );
+      currentY += 20;
+      doc
+        .moveTo(doc.page.margins.left, currentY)
+        .lineTo(doc.page.margins.left + docWidth, currentY)
+        .stroke();
+
+      // Contenido de la tabla por cada equipo y sus servicios
+      boletaData.equipos.forEach((eq) => {
+        const startOfEquipmentRow = currentY;
+        doc
+          .fontSize(10)
+          .text(
+            eq.descripcion_equipo,
+            doc.page.margins.left + 5,
+            currentY + 5,
+            { width: colWidths[0] - 10 }
+          );
+        let equipoTotal = 0;
+
+        eq.servicios.forEach((srv, index) => {
+          const serviceY = startOfEquipmentRow + 5 + index * 15;
+          doc.text(
+            srv.nombre_servicio,
+            doc.page.margins.left + colWidths[0] + 5,
+            serviceY,
+            { width: colWidths[1] - 10 }
+          );
+          doc.text(
+            `S/ ${parseFloat(srv.precio_servicio).toFixed(2)}`,
+            doc.page.margins.left + colWidths[0] + colWidths[1] + 5,
+            serviceY,
+            { width: colWidths[2] - 10 }
+          );
+          doc.text(
+            `S/ ${parseFloat(srv.precio_servicio).toFixed(2)}`,
+            doc.page.margins.left +
+              colWidths[0] +
+              colWidths[1] +
+              colWidths[2] +
+              5,
+            serviceY,
+            { width: colWidths[3] - 10 }
+          );
+          equipoTotal += parseFloat(srv.precio_servicio);
         });
-        doc.moveDown(0.5);
+
+        currentY = Math.max(doc.y, startOfEquipmentRow + 25);
+        doc
+          .moveTo(doc.page.margins.left, currentY)
+          .lineTo(doc.page.margins.left + docWidth, currentY)
+          .stroke();
+        subtotal += equipoTotal;
       });
 
-      doc.moveDown();
-      doc.fontSize(12).text(`Subtotal: S/ ${subtotal.toFixed(2)}`);
-      doc.text(`Total: S/ ${subtotal.toFixed(2)}`, { underline: true });
+      // Totales
+      currentY += 10;
+      const totalText = `Subtotal: S/ ${subtotal.toFixed(
+        2
+      )} | Total: S/ ${subtotal.toFixed(2)}`;
+      doc
+        .fontSize(12)
+        .text(totalText, doc.page.margins.left, currentY, { align: "right" });
 
       // Finalizar
       doc.end();

@@ -19,6 +19,11 @@
 -- Table structure for table `boleta`
 --
 
+CREATE DATABASE IF NOT EXISTS sistema_boletas;
+
+USE sistema_boletas;
+
+
 DROP TABLE IF EXISTS `boleta`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
@@ -125,6 +130,13 @@ CREATE TABLE `equipo_catalogo` (
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
+LOCK TABLES `equipo_catalogo` WRITE;
+/*!40000 ALTER TABLE `equipo_catalogo` DISABLE KEYS */;
+INSERT INTO `equipo_catalogo` VALUES (1,'PC');
+INSERT INTO `equipo_catalogo` VALUES (2,'Laptop');
+INSERT INTO `equipo_catalogo` VALUES (3,'Impresora');
+/*!40000 ALTER TABLE `equipo_catalogo` ENABLE KEYS */;
+UNLOCK TABLES;
 --
 -- Dumping data for table `equipo_catalogo`
 --
