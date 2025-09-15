@@ -2,17 +2,19 @@ import pool from "../config/db.js";
 
 export const buscarBoletasFlex = async (req, res) => {
   try {
-    const { query } = req.query;
+    const { query, sort, limite, desde, hasta, page = 1 } = req.query;
 
+    // Si el query es nulo, vacío o solo espacios, se retorna la lista por defecto.
     if (!query || query.trim() === "") {
-      return res
-        .status(400)
-        .json({ message: "Ingrese un criterio de búsqueda" });
+      const [rows] = await pool.query(
+        "SELECT * FROM boleta ORDER BY fecha_emision DESC LIMIT 50"
+      );
+      return res.json(rows);
     }
 
     const terms = query.trim().split(/\s+/);
 
-    // Construimos el WHERE dinámico
+    // Construcción de la cláusula WHERE.
     const whereClauses = terms.map(
       () => `
       (cliente_dni LIKE ? 
@@ -22,17 +24,34 @@ export const buscarBoletasFlex = async (req, res) => {
     `
     );
 
-    const sql = `
+    let sql = `
       SELECT * FROM boleta
       WHERE ${whereClauses.join(" AND ")}
     `;
 
-    // Armamos los parámetros (cada término aplica a 4 columnas)
+    // Armamos los parámetros.
     const params = [];
     terms.forEach((term) => {
       const likeTerm = `%${term}%`;
       params.push(likeTerm, likeTerm, likeTerm, likeTerm);
     });
+
+    // Se añaden las cláusulas de fecha y ordenamiento.
+    if (desde && hasta) {
+      sql += " AND fecha_emision BETWEEN ? AND ?";
+      params.push(desde, hasta);
+    }
+
+    if (sort === "asc") {
+      sql += " ORDER BY fecha_emision ASC";
+    } else {
+      sql += " ORDER BY fecha_emision DESC";
+    }
+
+    const resultLimit = parseInt(limite) || 50;
+    const offset = (page - 1) * resultLimit;
+    sql += " LIMIT ? OFFSET ?";
+    params.push(resultLimit, offset);
 
     const [rows] = await pool.query(sql, params);
 
