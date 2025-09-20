@@ -8,6 +8,7 @@ dotenv.config();
 export const generarPDFBoleta = (boletaData) => {
   return new Promise((resolve, reject) => {
     try {
+      // Usamos el id de la boleta para el nombre del archivo
       const filename = `${boletaData.numero_boleta}.pdf`;
       const filePath = path.join("pdfs", filename);
 
@@ -28,18 +29,18 @@ export const generarPDFBoleta = (boletaData) => {
       const boxWidth = 200;
       const boxX = doc.page.width - doc.page.margins.right - boxWidth;
 
-      // Logo en la esquina superior izquierda con dimensiones originales
+      // Logo en la esquina superior izquierda
       doc.image(imagen1, doc.page.margins.left, startY, {
         width: logoWidth,
         height: logoHeight,
       });
 
-      // El cuadro de información de la boleta se mueve debajo del logo
+      // El cuadro de información de la boleta
       const boxY = startY + 10;
       doc.rect(boxX, boxY, boxWidth, 70).stroke();
 
       // Contenido de la caja
-      doc.fontSize(10).text(`R.U.C ${process.env.RUC}`, boxX, boxY + 5, {
+      doc.fontSize(11).text(`R.U.C ${process.env.RUC}`, boxX, boxY + 5, {
         width: boxWidth,
         align: "center",
       });
@@ -48,7 +49,7 @@ export const generarPDFBoleta = (boletaData) => {
         .lineTo(boxX + boxWidth, boxY + 25)
         .stroke();
 
-      doc.fontSize(12).text(boletaData.tipo, boxX, boxY + 30, {
+      doc.fontSize(12).text(`Boleta-${boletaData.tipo}`, boxX, boxY + 30, {
         width: boxWidth,
         align: "center",
       });
@@ -57,12 +58,12 @@ export const generarPDFBoleta = (boletaData) => {
         .lineTo(boxX + boxWidth, boxY + 50)
         .stroke();
 
-      doc.fontSize(10).text(`N° ${boletaData.numero_boleta}`, boxX, boxY + 55, {
+      doc.fontSize(11).text(`N° ${boletaData.numero_boleta}`, boxX, boxY + 55, {
         width: boxWidth,
         align: "center",
       });
 
-      doc.y = Math.max(doc.y, startY + logoHeight) + 15; // Ajusta el flujo vertical
+      doc.y = Math.max(doc.y, startY + logoHeight) + 15;
 
       // --- Sección de Datos del Cliente, Fecha y Atendido por ---
       const clienteRectY = doc.y;
@@ -79,7 +80,7 @@ export const generarPDFBoleta = (boletaData) => {
         clienteInfo += ` | RUC: ${boletaData.cliente.ruc}`;
       doc.fontSize(10).text(clienteInfo, clienteTextX, clienteTextY);
 
-      // Fecha de Emisión (nuevo campo)
+      // Fecha de Emisión
       const fechaText = `Fecha: ${boletaData.fecha_emision}`;
       const fechaWidth = doc.widthOfString(fechaText);
       const fechaX = docWidth + doc.page.margins.left - fechaWidth - 5;
@@ -156,18 +157,33 @@ export const generarPDFBoleta = (boletaData) => {
       // Contenido de la tabla por cada equipo y sus servicios
       boletaData.equipos.forEach((eq) => {
         const startOfEquipmentRow = currentY;
+
+        // AÑADIMOS EL NOMBRE DEL EQUIPO AQUÍ
         doc
           .fontSize(10)
+          .font("Helvetica-Bold") // Aplica negrita al nombre
           .text(
-            eq.descripcion_equipo,
+            `${eq.id_equipo_catalogo}`, // Usa la propiedad nombre_equipo
             doc.page.margins.left + 5,
             currentY + 5,
             { width: colWidths[0] - 10 }
           );
+
+        // La descripción ahora se coloca debajo del nombre
+        doc
+          .font("Helvetica") // Vuelve a la fuente normal para la descripción
+          .text(
+            `Descripción: ${eq.descripcion_equipo}`,
+            doc.page.margins.left + 5,
+            currentY + 20, // Ajusta la posición vertical
+            { width: colWidths[0] - 10 }
+          );
+
         let equipoTotal = 0;
 
         eq.servicios.forEach((srv, index) => {
-          const serviceY = startOfEquipmentRow + 5 + index * 15;
+          // Ajusta la posición vertical de los servicios
+          const serviceY = startOfEquipmentRow + 35 + index * 15;
           doc.text(
             srv.nombre_servicio,
             doc.page.margins.left + colWidths[0] + 5,
@@ -193,7 +209,11 @@ export const generarPDFBoleta = (boletaData) => {
           equipoTotal += parseFloat(srv.precio_servicio);
         });
 
-        currentY = Math.max(doc.y, startOfEquipmentRow + 25);
+        // Asegura que la posición del próximo equipo sea la correcta
+        currentY = Math.max(
+          doc.y,
+          startOfEquipmentRow + 35 + eq.servicios.length * 15
+        );
         doc
           .moveTo(doc.page.margins.left, currentY)
           .lineTo(doc.page.margins.left + docWidth, currentY)

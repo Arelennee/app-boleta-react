@@ -58,6 +58,16 @@ const BoletaForm = ({ onSubmit }) => {
     });
   };
 
+  const handleRemoveEquipo = (indexToRemove) => {
+    const updatedEquipos = formData.equipos.filter(
+      (_, index) => index !== indexToRemove
+    );
+    setFormData({
+      ...formData,
+      equipos: updatedEquipos,
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (
@@ -67,11 +77,13 @@ const BoletaForm = ({ onSubmit }) => {
       !formData.dni_atiende
     ) {
       alert("Por favor, complete los campos necesarios");
+      return;
     }
     if (!formData.equipos || formData.equipos.length === 0) {
       alert(
         "Debe añadir almenos un equipo y servicio para poder generar la boleta"
       );
+      return;
     }
     try {
       const result = await crearBoleta(formData);
@@ -193,20 +205,32 @@ const BoletaForm = ({ onSubmit }) => {
                   <p>No hay equipos agregados.</p>
                 )}
                 {formData.equipos.map((eq, index) => (
-                  <div key={index} className="border p-2 mt-2">
-                    <p>
-                      <strong>Equipo ID:</strong> {eq.id_equipo_catalogo}
-                    </p>
-                    <p>
-                      <strong>Descripción:</strong> {eq.descripcion_equipo}
-                    </p>
-                    <ul className="list-disc pl-5">
-                      {eq.servicios.map((srv, idx) => (
-                        <li key={idx}>
-                          {srv.nombre_servicio} - S/. {srv.precio_servicio}
-                        </li>
-                      ))}
-                    </ul>
+                  <div
+                    key={index}
+                    className="border p-2 mt-2 flex justify-between items-center"
+                  >
+                    <div>
+                      <p>
+                        <strong>Equipo:</strong> {eq.nombre_equipo}
+                      </p>
+                      <p>
+                        <strong>Descripción:</strong> {eq.descripcion_equipo}
+                      </p>
+                      <ul className="list-disc pl-5">
+                        {eq.servicios.map((srv, idx) => (
+                          <li key={idx}>
+                            {srv.nombre_servicio} - S/. {srv.precio_servicio}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveEquipo(index)}
+                      className="bg-red-500 text-white px-2 py-1 rounded"
+                    >
+                      Eliminar
+                    </button>
                   </div>
                 ))}
               </div>
