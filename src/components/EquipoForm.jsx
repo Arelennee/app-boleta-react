@@ -1,4 +1,3 @@
-// components/EquipoForm.jsx
 import { useState, useEffect } from "react";
 import getEquiposCatalogo from "../services/equiposServices";
 
@@ -14,7 +13,7 @@ const EquipoForm = ({ onAddEquipo }) => {
     precio_servicio: "",
   });
 
-  // Cargar los equipos del catálogo al montar
+  // Cargar los equipos del catálogo al montar el componente
   useEffect(() => {
     const fetchEquipos = async () => {
       try {
@@ -27,7 +26,7 @@ const EquipoForm = ({ onAddEquipo }) => {
     fetchEquipos();
   }, []);
 
-  // Agregar servicio a la lista temporal
+  // Agregar un servicio a la lista temporal
   const handleAddServicio = () => {
     if (servicio.nombre_servicio && servicio.precio_servicio) {
       setEquipo({
@@ -38,10 +37,38 @@ const EquipoForm = ({ onAddEquipo }) => {
     }
   };
 
-  // Agregar equipo completo al padre (BoletaForm)
+  // Eliminar un servicio por su índice en la lista
+  const handleRemoveServicio = (indexToRemove) => {
+    const nuevosServicios = equipo.servicios.filter(
+      (_, index) => index !== indexToRemove
+    );
+    setEquipo({
+      ...equipo,
+      servicios: nuevosServicios,
+    });
+  };
+
+  // Agregar el equipo completo al componente padre
   const handleAddEquipo = () => {
     if (equipo.id_equipo_catalogo && equipo.servicios.length > 0) {
-      onAddEquipo(equipo);
+      const idSeleccionado = Number(equipo.id_equipo_catalogo);
+      // Buscar el objeto del equipo completo en el catálogo para obtener su nombre
+      const equipoSeleccionado = equiposCatalogo.find(
+        (eq) => eq.id_equipo_catalogo === idSeleccionado
+      );
+
+      // Crear un nuevo objeto de equipo con el nombre antes de enviarlo
+      const equipoConNombre = {
+        ...equipo,
+        nombre_equipo: equipoSeleccionado
+          ? equipoSeleccionado.nombre_equipo
+          : "Nombre no encontrado",
+      };
+
+      // Enviar el nuevo objeto al componente padre
+      onAddEquipo(equipoConNombre);
+
+      // Reiniciar el estado del formulario para un nuevo registro
       setEquipo({
         id_equipo_catalogo: "",
         descripcion_equipo: "",
@@ -81,7 +108,7 @@ const EquipoForm = ({ onAddEquipo }) => {
         className="border p-2 w-full"
       />
 
-      {/* Servicios */}
+      {/* Formulario de servicios */}
       <div className="space-y-2">
         <input
           type="text"
@@ -112,11 +139,18 @@ const EquipoForm = ({ onAddEquipo }) => {
             </button>
           </div>
           <div>
-            {/* Lista de servicios agregados */}
+            {/* Lista de servicios agregados con botón de eliminar */}
             <ul className="list-disc pl-5">
               {equipo.servicios.map((srv, index) => (
                 <li key={index}>
                   {srv.nombre_servicio} - S/. {srv.precio_servicio}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveServicio(index)}
+                    className="ml-2 text-red-500 hover:text-red-700"
+                  >
+                    Eliminar
+                  </button>
                 </li>
               ))}
             </ul>
