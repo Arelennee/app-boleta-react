@@ -5,10 +5,32 @@ import imagen1 from "./image.js";
 import dotenv from "dotenv";
 dotenv.config();
 
+const formatDateTime = (dateString) => {
+  const date = new Date(dateString);
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+};
+
+const getEquipmentNameById = (id) => {
+  switch (id) {
+    case 1:
+      return "PC";
+    case 2:
+      return "Laptop";
+    case 3:
+      return "Impresora";
+    default:
+      return "Equipo no especificado";
+  }
+};
+
 export const generarPDFBoleta = (boletaData) => {
   return new Promise((resolve, reject) => {
     try {
-      // Usamos el id de la boleta para el nombre del archivo
       const filename = `${boletaData.numero_boleta}.pdf`;
       const filePath = path.join("pdfs", filename);
 
@@ -29,17 +51,14 @@ export const generarPDFBoleta = (boletaData) => {
       const boxWidth = 200;
       const boxX = doc.page.width - doc.page.margins.right - boxWidth;
 
-      // Logo en la esquina superior izquierda
       doc.image(imagen1, doc.page.margins.left, startY, {
         width: logoWidth,
         height: logoHeight,
       });
 
-      // El cuadro de información de la boleta
       const boxY = startY + 10;
       doc.rect(boxX, boxY, boxWidth, 70).stroke();
 
-      // Contenido de la caja
       doc.fontSize(11).text(`R.U.C ${process.env.RUC}`, boxX, boxY + 5, {
         width: boxWidth,
         align: "center",
@@ -72,7 +91,6 @@ export const generarPDFBoleta = (boletaData) => {
       const clienteTextX = doc.page.margins.left + 5;
       const clienteTextY = clienteRectY + 5;
 
-      // Datos del cliente en una sola línea
       let clienteInfo = `Cliente: ${boletaData.cliente.nombre}`;
       if (boletaData.cliente.dni)
         clienteInfo += ` | DNI: ${boletaData.cliente.dni}`;
@@ -80,13 +98,12 @@ export const generarPDFBoleta = (boletaData) => {
         clienteInfo += ` | RUC: ${boletaData.cliente.ruc}`;
       doc.fontSize(10).text(clienteInfo, clienteTextX, clienteTextY);
 
-      // Fecha de Emisión
-      const fechaText = `Fecha: ${boletaData.fecha_emision}`;
+      const fechaHoraFormateada = formatDateTime(boletaData.fecha_emision);
+      const fechaText = `Fecha: ${fechaHoraFormateada}`;
       const fechaWidth = doc.widthOfString(fechaText);
       const fechaX = docWidth + doc.page.margins.left - fechaWidth - 5;
       doc.text(fechaText, fechaX, clienteTextY);
 
-      // Información de quien atendió
       const atendidoPorText = `Atendido por: ${boletaData.atendido_por.nombre} (DNI: ${boletaData.atendido_por.dni})`;
       doc.text(atendidoPorText, clienteTextX, clienteRectY + 20);
 
@@ -158,31 +175,30 @@ export const generarPDFBoleta = (boletaData) => {
       boletaData.equipos.forEach((eq) => {
         const startOfEquipmentRow = currentY;
 
-        // AÑADIMOS EL NOMBRE DEL EQUIPO AQUÍ
+        // **USAMOS LA FUNCIÓN PARA OBTENER EL NOMBRE A PARTIR DEL ID**
+        const nombreEquipo = getEquipmentNameById(
+          Number(eq.id_equipo_catalogo)
+        );
+
         doc
           .fontSize(10)
-          .font("Helvetica-Bold") // Aplica negrita al nombre
-          .text(
-            `${eq.id_equipo_catalogo}`, // Usa la propiedad nombre_equipo
-            doc.page.margins.left + 5,
-            currentY + 5,
-            { width: colWidths[0] - 10 }
-          );
+          .font("Helvetica-Bold")
+          .text(`${nombreEquipo}`, doc.page.margins.left + 5, currentY + 5, {
+            width: colWidths[0] - 10,
+          });
 
-        // La descripción ahora se coloca debajo del nombre
         doc
-          .font("Helvetica") // Vuelve a la fuente normal para la descripción
+          .font("Helvetica")
           .text(
             `Descripción: ${eq.descripcion_equipo}`,
             doc.page.margins.left + 5,
-            currentY + 20, // Ajusta la posición vertical
+            currentY + 20,
             { width: colWidths[0] - 10 }
           );
 
         let equipoTotal = 0;
 
         eq.servicios.forEach((srv, index) => {
-          // Ajusta la posición vertical de los servicios
           const serviceY = startOfEquipmentRow + 35 + index * 15;
           doc.text(
             srv.nombre_servicio,
@@ -209,7 +225,6 @@ export const generarPDFBoleta = (boletaData) => {
           equipoTotal += parseFloat(srv.precio_servicio);
         });
 
-        // Asegura que la posición del próximo equipo sea la correcta
         currentY = Math.max(
           doc.y,
           startOfEquipmentRow + 35 + eq.servicios.length * 15
@@ -221,7 +236,6 @@ export const generarPDFBoleta = (boletaData) => {
         subtotal += equipoTotal;
       });
 
-      // Totales
       currentY += 10;
       const totalText = `Subtotal: S/ ${subtotal.toFixed(
         2
@@ -230,7 +244,6 @@ export const generarPDFBoleta = (boletaData) => {
         .fontSize(12)
         .text(totalText, doc.page.margins.left, currentY, { align: "right" });
 
-      // Finalizar
       doc.end();
       stream.on("finish", () => resolve(filename));
       stream.on("error", reject);
