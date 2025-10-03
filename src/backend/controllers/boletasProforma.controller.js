@@ -5,12 +5,12 @@ import { generarPDFBoleta } from "../utils/pdfGenerator.js";
 dotenv.config();
 
 // boletasProformaController.js
+// crearBoletaProformaController.js (CÓDIGO CORREGIDO)
 export const crearBoletaProforma = async (req, res) => {
   const connection = await pool.getConnection();
   await connection.beginTransaction();
 
-  const numeroBoleta = await generarNumeroBoleta();
-  // Variable para almacenar la ruta relativa del PDF
+  const numeroBoleta = await generarNumeroBoleta(); // Variable para almacenar la ruta relativa del PDF
   let pdfRelativePath = null;
 
   try {
@@ -19,16 +19,14 @@ export const crearBoletaProforma = async (req, res) => {
       cliente_dni,
       cliente_ruc,
       cliente_cel,
-      atendido_por,
-      dni_atiende,
+      atendido_por, // 💡 ELIMINADO: dni_atiende
       observaciones,
       equipos,
-    } = req.body; // 1. Validaciones (Sin cambios)
+    } = req.body; // 1. Validaciones Ajustadas // 💡 AJUSTE: dni_atiende eliminado de la validación
 
-    if (!cliente_nombre || !cliente_cel || !atendido_por || !dni_atiende) {
+    if (!cliente_nombre || !cliente_cel || !atendido_por) {
       return res.status(400).json({
-        message:
-          "Faltan campos obligatorios (nombre, celular, atendido_por o dni_atiende)",
+        message: "Faltan campos obligatorios (nombre, celular o atendido_por)",
       });
     }
     if (!equipos || equipos.length === 0) {
@@ -38,7 +36,7 @@ export const crearBoletaProforma = async (req, res) => {
     } // 2. Pre-cálculo de Subtotal (Sin cambios)
 
     let subtotal = 0;
-
+    // ... lógica de cálculo sin cambios ...
     for (const eq of equipos) {
       if (
         !eq.id_equipo_catalogo ||
@@ -55,10 +53,11 @@ export const crearBoletaProforma = async (req, res) => {
       }
     }
 
-    const total = subtotal; // 3. Inserción de la Boleta (Sin cambios)
+    const total = subtotal; // 3. Inserción de la Boleta (AJUSTADO)
 
+    // 💡 AJUSTE: 'dni_atiende' eliminado de la lista de columnas
     const [boletaResult] = await connection.query(
-      "INSERT INTO boleta (tipo, cliente_nombre, cliente_dni, cliente_ruc, cliente_cel, empresa_ruc, atendido_por, dni_atiende, subtotal, total, numero_boleta, observaciones) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO boleta (tipo, cliente_nombre, cliente_dni, cliente_ruc, cliente_cel, empresa_ruc, atendido_por, subtotal, total, numero_boleta, observaciones) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [
         "PROFORMA",
         cliente_nombre,
@@ -66,8 +65,7 @@ export const crearBoletaProforma = async (req, res) => {
         cliente_ruc || null,
         cliente_cel,
         process.env.RUC,
-        atendido_por,
-        dni_atiende,
+        atendido_por, // 💡 AJUSTE: dni_atiende eliminado de la lista de valores
         subtotal,
         total,
         numeroBoleta,
@@ -77,6 +75,7 @@ export const crearBoletaProforma = async (req, res) => {
 
     const boletaId = boletaResult.insertId; // 4. Inserción Masiva de Equipos y Servicios (Sin cambios)
 
+    // ... lógica de inserción de equipos y servicios sin cambios ...
     const equipoValues = equipos.map((eq) => [
       boletaId,
       eq.id_equipo_catalogo,
@@ -115,9 +114,8 @@ export const crearBoletaProforma = async (req, res) => {
       "SELECT fecha_emision FROM boleta WHERE id_boleta = ?",
       [boletaId]
     );
-    const fecha_emision = boletaFinalResult[0].fecha_emision;
+    const fecha_emision = boletaFinalResult[0].fecha_emision; // 6. Preparación de la Data para el PDF (AJUSTADO)
 
-    // 6. Preparación de la Data para el PDF (Sin cambios)
     const boletaData = {
       id_boleta: boletaId,
       tipo: "PROFORMA",
@@ -130,14 +128,14 @@ export const crearBoletaProforma = async (req, res) => {
       },
       empresa_ruc: process.env.RUC,
       atendido_por: {
-        nombre: atendido_por,
-        dni: dni_atiende,
+        nombre: atendido_por, // 💡 AJUSTE: dni eliminado del objeto // dni: dni_atiende,
       },
       observaciones,
       subtotal,
       total,
       fecha_emision,
       equipos: equipos.map((eq) => ({
+        // ... equipos y servicios sin cambios ...
         id_equipo_catalogo: eq.id_equipo_catalogo,
         descripcion_equipo: eq.descripcion_equipo,
         servicios: eq.servicios.map((srv) => ({
@@ -145,31 +143,24 @@ export const crearBoletaProforma = async (req, res) => {
           precio_servicio: srv.precio_servicio,
         })),
       })),
-    };
+    }; // 7. Generar PDF y Guardar URL (Sin cambios)
 
-    // 7. Generar PDF (Se obtiene la ruta del archivo)
     const pdfPath = await generarPDFBoleta(boletaData);
-
-    // 💡 PASO CLAVE 1: Obtener la ruta relativa del PDF
-    // Asumiendo que pdfPath devuelve una ruta completa (ej: '/ruta/al/proyecto/pdfs/PRO-000001.pdf')
-    // Usamos la ruta relativa que necesitamos para la web.
     pdfRelativePath = `pdfs/${numeroBoleta}.pdf`;
 
-    // 💡 PASO CLAVE 2: Guardar la ruta del PDF en la boleta antes del commit
     await connection.query(
       "UPDATE boleta SET pdf_url = ? WHERE id_boleta = ?",
       [pdfRelativePath, boletaId]
     );
 
-    await connection.commit(); // 8. Preparación de la respuesta
+    await connection.commit(); // 8. Preparación de la respuesta (Sin cambios)
 
     res.status(200).json({
       message: "Bill Succesfully created",
       id_boleta: boletaId,
       subtotal,
       total,
-      // 💡 PASO CLAVE 3: Devolver la URL completa para que el frontend la abra inmediatamente
-      pdfUrl: `pdfs/${numeroBoleta}.pdf`, // Esta es la ruta que el frontend usa para construir http://localhost:3000/...
+      pdfUrl: `pdfs/${numeroBoleta}.pdf`,
     });
   } catch (e) {
     await connection.rollback();

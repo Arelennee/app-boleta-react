@@ -26,6 +26,7 @@ export async function buscarBoletas(params) {
         );
       } catch (e) {
         // Si falla el .json() (ej. el error es HTML o texto plano), lanzamos el error de estado
+        console.error(e);
         throw new Error(`Error al buscar boletas: HTTP ${res.status}`);
       }
     }
