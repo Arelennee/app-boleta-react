@@ -96,6 +96,8 @@ export const generarPDFBoleta = (boletaData) => {
         clienteInfo += ` | DNI: ${boletaData.cliente.dni}`;
       if (boletaData.cliente.ruc)
         clienteInfo += ` | RUC: ${boletaData.cliente.ruc}`;
+      if (boletaData.cliente.cel)
+        clienteInfo += ` | Número de Cliente: ${boletaData.cliente.cel}`;
       doc.fontSize(10).text(clienteInfo, clienteTextX, clienteTextY);
 
       const fechaHoraFormateada = formatDateTime(boletaData.fecha_emision);
@@ -138,7 +140,7 @@ export const generarPDFBoleta = (boletaData) => {
         docWidth * 0.2,
       ];
       let currentY = tableTop;
-      let subtotal = 0;
+      let totalBoleta = 0;
 
       // Encabezados de la tabla
       doc
@@ -198,6 +200,12 @@ export const generarPDFBoleta = (boletaData) => {
 
         let equipoTotal = 0;
 
+        // Primero calculamos el total del equipo sumando todos los servicios
+        eq.servicios.forEach((srv) => {
+          equipoTotal += parseFloat(srv.precio_servicio);
+        });
+
+        // Luego mostramos cada servicio con su precio unitario
         eq.servicios.forEach((srv, index) => {
           const serviceY = startOfEquipmentRow + 35 + index * 15;
           doc.text(
@@ -212,18 +220,20 @@ export const generarPDFBoleta = (boletaData) => {
             serviceY,
             { width: colWidths[2] - 10 }
           );
-          doc.text(
-            `S/ ${parseFloat(srv.precio_servicio).toFixed(2)}`,
-            doc.page.margins.left +
-              colWidths[0] +
-              colWidths[1] +
-              colWidths[2] +
-              5,
-            serviceY,
-            { width: colWidths[3] - 10 }
-          );
-          equipoTotal += parseFloat(srv.precio_servicio);
         });
+
+        // Mostramos el total del equipo (suma de todos sus servicios) en la columna "Total"
+        const totalEquipoY = startOfEquipmentRow + 35;
+        doc.text(
+          `S/ ${equipoTotal.toFixed(2)}`,
+          doc.page.margins.left +
+            colWidths[0] +
+            colWidths[1] +
+            colWidths[2] +
+            5,
+          totalEquipoY,
+          { width: colWidths[3] - 10 }
+        );
 
         currentY = Math.max(
           doc.y,
@@ -233,13 +243,13 @@ export const generarPDFBoleta = (boletaData) => {
           .moveTo(doc.page.margins.left, currentY)
           .lineTo(doc.page.margins.left + docWidth, currentY)
           .stroke();
-        subtotal += equipoTotal;
+
+        totalBoleta += equipoTotal;
       });
 
       currentY += 10;
-      const totalText = `Subtotal: S/ ${subtotal.toFixed(
-        2
-      )} | Total: S/ ${subtotal.toFixed(2)}`;
+      // Solo mostramos el total de la boleta, sin subtotal
+      const totalText = `Total: S/ ${totalBoleta.toFixed(2)}`;
       doc
         .fontSize(12)
         .text(totalText, doc.page.margins.left, currentY, { align: "right" });

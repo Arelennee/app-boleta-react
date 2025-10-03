@@ -7,27 +7,39 @@ dotenv.config();
 export const crearBoletaProforma = async (req, res) => {
   const connection = await pool.getConnection();
   await connection.beginTransaction();
+
   const numeroBoleta = await generarNumeroBoleta();
 
   try {
     const {
       cliente_nombre,
-      cliente_dni,
+      cliente_dni, // Ahora puede ser nulo
       cliente_ruc,
+      cliente_cel, // Ahora es obligatorio
       atendido_por,
       dni_atiende,
       observaciones,
       equipos,
     } = req.body;
 
-    if (!cliente_nombre || !cliente_dni || !atendido_por || !dni_atiende) {
-      return res.status(400).json({ message: "Faltan campos con datos" });
+    // 1. Validaciones Ajustadas
+    // Se valida que cliente_nombre, cliente_cel, atendido_por y dni_atiende NO sean nulos.
+    if (!cliente_nombre || !cliente_cel || !atendido_por || !dni_atiende) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Faltan campos obligatorios (nombre, celular, atendido_por o dni_atiende)",
+        });
     }
     if (!equipos || equipos.length === 0) {
-      res
+      return res
         .status(400)
-        .json({ message: "Inlcuya al menos un equipo para generar la boleta" });
+        .json({ message: "Incluya al menos un equipo para generar la boleta" });
     }
+
+    // 2. Pre-cálculo de Subtotal y Validación de Equipos/Servicios
+    let subtotal = 0;
 
     for (const eq of equipos) {
       if (
@@ -39,18 +51,28 @@ export const crearBoletaProforma = async (req, res) => {
           .status(400)
           .json({ message: "Equipos o servicios incompletos" });
       }
+
+      for (const srv of eq.servicios) {
+        subtotal += parseFloat(srv.precio_servicio || 0);
+      }
     }
 
+    const total = subtotal;
+
+    // 3. Inserción de la Boleta (Ajuste en la consulta SQL y en los valores)
     const [boletaResult] = await connection.query(
-      "INSERT INTO boleta (tipo, cliente_nombre, cliente_dni, cliente_ruc, empresa_ruc, atendido_por, dni_atiende, subtotal, total, numero_boleta, observaciones) VALUES (?, ?, ?, ?, ?, ?, ?, 0.00, 0.00, ?, ?)",
+      "INSERT INTO boleta (tipo, cliente_nombre, cliente_dni, cliente_ruc, cliente_cel, empresa_ruc, atendido_por, dni_atiende, subtotal, total, numero_boleta, observaciones) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [
         "PROFORMA",
         cliente_nombre,
-        cliente_dni,
+        cliente_dni || null, // <-- Ajuste: Usamos null si cliente_dni está vacío
         cliente_ruc || null,
+        cliente_cel, // <-- Ajuste: Se inserta el valor obligatorio
         process.env.RUC,
         atendido_por,
         dni_atiende,
+        subtotal,
+        total,
         numeroBoleta,
         observaciones || null,
       ]
@@ -58,33 +80,42 @@ export const crearBoletaProforma = async (req, res) => {
 
     const boletaId = boletaResult.insertId;
 
-    let subtotal = 0;
+    // 4. Inserción Masiva de Equipos (Batch Insert) (Sin cambios)
+    const equipoValues = equipos.map((eq) => [
+      boletaId,
+      eq.id_equipo_catalogo,
+      eq.descripcion_equipo,
+    ]);
 
-    for (const eq of equipos) {
-      const [equipoResult] = await connection.query(
-        "INSERT INTO boleta_equipo (id_boleta, id_equipo_catalogo, descripcion_equipo) VALUES (?, ?, ?)",
-        [boletaId, eq.id_equipo_catalogo, eq.descripcion_equipo]
+    let serviciosData = [];
+    if (equipoValues.length > 0) {
+      const [equipoInsertResult] = await connection.query(
+        "INSERT INTO boleta_equipo (id_boleta, id_equipo_catalogo, descripcion_equipo) VALUES ?",
+        [equipoValues]
       );
 
-      const equipoId = equipoResult.insertId;
+      const primerEquipoId = equipoInsertResult.insertId;
 
-      for (const srv of eq.servicios) {
+      for (let i = 0; i < equipos.length; i++) {
+        const equipoId = primerEquipoId + i;
+        for (const srv of equipos[i].servicios) {
+          serviciosData.push([
+            equipoId,
+            srv.nombre_servicio,
+            srv.precio_servicio,
+          ]);
+        }
+      }
+
+      if (serviciosData.length > 0) {
         await connection.query(
-          "INSERT INTO boleta_equipo_servicio (id_boleta_equipo, nombre_servicio, precio_servicio) VALUES (?, ?, ?)",
-          [equipoId, srv.nombre_servicio, srv.precio_servicio]
+          "INSERT INTO boleta_equipo_servicio (id_boleta_equipo, nombre_servicio, precio_servicio) VALUES ?",
+          [serviciosData]
         );
-        subtotal += parseFloat(srv.precio_servicio);
       }
     }
 
-    const total = subtotal;
-
-    await connection.query(
-      "UPDATE boleta SET subtotal = ?, total = ? WHERE id_boleta = ?",
-      [subtotal, total, boletaId]
-    );
-
-    // 💡 Paso clave: Obtener la fecha de la base de datos
+    // 5. Obtención de la fecha
     const [boletaFinalResult] = await connection.query(
       "SELECT fecha_emision FROM boleta WHERE id_boleta = ?",
       [boletaId]
@@ -93,14 +124,16 @@ export const crearBoletaProforma = async (req, res) => {
 
     await connection.commit();
 
+    // 6. Preparación de la respuesta
     const boletaData = {
       id_boleta: boletaId,
       tipo: "PROFORMA",
       numero_boleta: numeroBoleta,
       cliente: {
         nombre: cliente_nombre,
-        dni: cliente_dni,
+        dni: cliente_dni || null, // <-- Devuelve null si no se proporcionó DNI
         ruc: cliente_ruc || null,
+        cel: cliente_cel,
       },
       empresa_ruc: process.env.RUC,
       atendido_por: {
@@ -110,7 +143,7 @@ export const crearBoletaProforma = async (req, res) => {
       observaciones,
       subtotal,
       total,
-      fecha_emision, // ✨ La fecha ahora está aquí
+      fecha_emision,
       equipos: equipos.map((eq) => ({
         id_equipo_catalogo: eq.id_equipo_catalogo,
         descripcion_equipo: eq.descripcion_equipo,
@@ -141,58 +174,108 @@ export const crearBoletaProforma = async (req, res) => {
   }
 };
 
-//obtencion de la boleta proforma mediante el numero de boleta
+//----------------------------------------------------------------------
+
+/**
+ * Función Optimizada: obtenerBoletaProforma
+ * - Consolida boleta, equipos y nombres de equipos en una sola consulta (JOIN).
+ * - Obtiene todos los servicios en una sola consulta (SELECT IN (?)).
+ * - Reduce el número total de consultas de lectura de N+1 a solo 2.
+ */
 export const obtenerBoletaProforma = async (req, res) => {
   const { numero_boleta } = req.params;
 
   try {
-    const [boletaRows] = await pool.query(
-      'SELECT * FROM boleta WHERE numero_boleta = ? AND tipo = "PROFORMA"',
+    // 1. Consulta Consolidada: Boleta + Equipos
+    const [rows] = await pool.query(
+      `SELECT
+            b.id_boleta, b.tipo, b.cliente_nombre, b.cliente_dni, b.cliente_ruc, b.empresa_ruc, b.atendido_por, b.dni_atiende, b.subtotal, b.total, b.numero_boleta, b.observaciones, b.fecha_emision,
+            be.id_boleta_equipo,
+            be.id_equipo_catalogo,
+            be.descripcion_equipo,
+            ec.nombre_equipo
+        FROM boleta b
+        LEFT JOIN boleta_equipo be ON b.id_boleta = be.id_boleta
+        LEFT JOIN equipo_catalogo ec ON be.id_equipo_catalogo = ec.id_equipo_catalogo
+        WHERE b.numero_boleta = ? AND b.tipo = "PROFORMA"`,
       [numero_boleta]
     );
-    if (boletaRows.length === 0) {
-      return res.status(400).json({ message: "Bill not found" });
+
+    if (rows.length === 0 || !rows[0].id_boleta) {
+      return res.status(404).json({ message: "Bill not found" });
     }
 
-    const boleta = boletaRows[0];
+    // El objeto base de la boleta (tomado del primer row)
+    const boletaBase = {
+      id_boleta: rows[0].id_boleta,
+      tipo: rows[0].tipo,
+      cliente_nombre: rows[0].cliente_nombre,
+      cliente_dni: rows[0].cliente_dni,
+      cliente_ruc: rows[0].cliente_ruc,
+      atendido_por: rows[0].atendido_por,
+      dni_atiende: rows[0].dni_atiende,
+      observaciones: rows[0].observaciones,
+      subtotal: rows[0].subtotal,
+      total: rows[0].total,
+      numero_boleta: rows[0].numero_boleta,
+      fecha_emision: rows[0].fecha_emision,
+      empresa_ruc: rows[0].empresa_ruc,
+      equipos: [],
+    };
 
-    const [equiposRows] = await pool.query(
-      "SELECT be.*, ec.nombre_equipo FROM boleta_equipo be INNER JOIN equipo_catalogo ec ON be.id_equipo_catalogo = ec.id_equipo_catalogo WHERE be.id_boleta = ?",
-      [boleta.id_boleta]
-    );
+    // 2. Recolectar IDs de equipos
+    const equipoIds = rows
+      .filter((row) => row.id_boleta_equipo != null)
+      .map((row) => row.id_boleta_equipo);
 
     let serviciosMap = {};
-    if (equiposRows.length > 0) {
-      const equipoIds = equiposRows.map((eq) => eq.id_boleta_equipo);
+    if (equipoIds.length > 0) {
+      // 3. Consulta Única para todos los Servicios
       const [serviciosRows] = await pool.query(
-        "SELECT * FROM boleta_equipo_servicio WHERE id_boleta_equipo IN (?)",
+        "SELECT id_boleta_equipo, nombre_servicio, precio_servicio FROM boleta_equipo_servicio WHERE id_boleta_equipo IN (?)",
         [equipoIds]
       );
 
+      // Mapeo de servicios
       serviciosMap = serviciosRows.reduce((acc, servicio) => {
-        if (!acc[servicio.id_boleta_equipo]) {
-          acc[servicio.id_boleta_equipo] = [];
+        const id = servicio.id_boleta_equipo;
+        if (!acc[id]) {
+          acc[id] = [];
         }
-        acc[servicio.id_boleta_equipo].push(servicio);
+        acc[id].push({
+          nombre_servicio: servicio.nombre_servicio,
+          precio_servicio: servicio.precio_servicio,
+        });
         return acc;
       }, {});
     }
 
-    const equiposConServicios = equiposRows.map((eq) => ({
-      ...eq,
-      servicios: serviciosMap[eq.id_boleta_equipo] || [],
-    }));
+    // 4. Reconstrucción del objeto final (en la aplicación)
+    const equiposMap = {};
+    rows.forEach((row) => {
+      if (row.id_boleta_equipo) {
+        if (!equiposMap[row.id_boleta_equipo]) {
+          equiposMap[row.id_boleta_equipo] = {
+            id_boleta_equipo: row.id_boleta_equipo,
+            id_equipo_catalogo: row.id_equipo_catalogo,
+            descripcion_equipo: row.descripcion_equipo,
+            nombre_equipo: row.nombre_equipo,
+            servicios: serviciosMap[row.id_boleta_equipo] || [],
+          };
+        }
+      }
+    });
 
-    const boletaCompleta = {
-      ...boleta,
-      equipos: equiposConServicios,
-    };
-    res.json(boletaCompleta);
+    boletaBase.equipos = Object.values(equiposMap);
+
+    res.json(boletaBase);
   } catch (e) {
     console.log("An error happend ", e);
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+//----------------------------------------------------------------------
 
 export const descargarBoletaProforma = async (req, res) => {
   try {
@@ -201,6 +284,8 @@ export const descargarBoletaProforma = async (req, res) => {
 
     res.sendFile(pdfPath, { root: process.cwd() });
   } catch (e) {
-    res.status(500).json({ message: "error al enviar el pdf", e });
+    res
+      .status(500)
+      .json({ message: "error al enviar el pdf", error: e.message });
   }
 };
