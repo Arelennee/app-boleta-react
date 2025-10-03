@@ -1,3 +1,4 @@
+// pdfGenerator.js (CÓDIGO AJUSTADO)
 import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
@@ -42,7 +43,7 @@ export const generarPDFBoleta = (boletaData) => {
       const stream = fs.createWriteStream(filePath);
       doc.pipe(stream);
 
-      // --- Cabecera: Logo y RUC/Boleta ---
+      // --- Cabecera: Logo y RUC/Boleta (sin cambios) ---
       const startY = doc.y;
       const docWidth =
         doc.page.width - doc.page.margins.left - doc.page.margins.right;
@@ -84,7 +85,7 @@ export const generarPDFBoleta = (boletaData) => {
 
       doc.y = Math.max(doc.y, startY + logoHeight) + 15;
 
-      // --- Sección de Datos del Cliente, Fecha y Atendido por ---
+      // --- Sección de Datos del Cliente, Fecha y Atendido por (AJUSTADA) ---
       const clienteRectY = doc.y;
       doc.rect(doc.page.margins.left, clienteRectY, docWidth, 40).stroke();
 
@@ -106,15 +107,16 @@ export const generarPDFBoleta = (boletaData) => {
       const fechaX = docWidth + doc.page.margins.left - fechaWidth - 5;
       doc.text(fechaText, fechaX, clienteTextY);
 
-      const atendidoPorText = `Atendido por: ${boletaData.atendido_por.nombre} (DNI: ${boletaData.atendido_por.dni})`;
+      // 💡 AJUSTE CLAVE: Eliminamos la referencia a boletaData.atendido_por.dni
+      const atendidoPorText = `Atendido por: ${boletaData.atendido_por.nombre}`;
+      // Movemos este texto para que quede mejor centrado verticalmente
       doc.text(atendidoPorText, clienteTextX, clienteRectY + 20);
 
       doc.y = clienteRectY + 40 + 10;
 
-      // --- Sección de Observaciones ---
+      // --- Sección de Observaciones (sin cambios) ---
       const obsRectY = doc.y;
       doc.rect(doc.page.margins.left, obsRectY, docWidth, 40).stroke();
-
       if (boletaData.observaciones) {
         doc
           .fontSize(10)
@@ -131,7 +133,7 @@ export const generarPDFBoleta = (boletaData) => {
       }
       doc.y = obsRectY + 40 + 10;
 
-      // --- Tabla de Equipos y Servicios (Detallada) ---
+      // --- Tabla de Equipos y Servicios (sin cambios) ---
       const tableTop = doc.y;
       const colWidths = [
         docWidth * 0.4,
@@ -177,7 +179,6 @@ export const generarPDFBoleta = (boletaData) => {
       boletaData.equipos.forEach((eq) => {
         const startOfEquipmentRow = currentY;
 
-        // **USAMOS LA FUNCIÓN PARA OBTENER EL NOMBRE A PARTIR DEL ID**
         const nombreEquipo = getEquipmentNameById(
           Number(eq.id_equipo_catalogo)
         );
@@ -200,12 +201,10 @@ export const generarPDFBoleta = (boletaData) => {
 
         let equipoTotal = 0;
 
-        // Primero calculamos el total del equipo sumando todos los servicios
         eq.servicios.forEach((srv) => {
           equipoTotal += parseFloat(srv.precio_servicio);
         });
 
-        // Luego mostramos cada servicio con su precio unitario
         eq.servicios.forEach((srv, index) => {
           const serviceY = startOfEquipmentRow + 35 + index * 15;
           doc.text(
@@ -222,7 +221,6 @@ export const generarPDFBoleta = (boletaData) => {
           );
         });
 
-        // Mostramos el total del equipo (suma de todos sus servicios) en la columna "Total"
         const totalEquipoY = startOfEquipmentRow + 35;
         doc.text(
           `S/ ${equipoTotal.toFixed(2)}`,

@@ -1,17 +1,14 @@
-// components/BoletaForm.jsx
 import { useState, useEffect } from "react";
 import { crearBoleta } from "../services/boletasServices.js";
 import obtenerTrabajadores from "../services/trabajadoresServices.js";
 import EquipoForm from "./EquipoForm.jsx";
 
-// Definimos el estado inicial como una constante para facilitar el reseteo
 const INITIAL_FORM_STATE = {
   cliente_nombre: "",
   cliente_dni: "",
   cliente_ruc: "",
   cliente_cel: "",
   atendido_por: "",
-  dni_atiende: "",
   observaciones: "",
   equipos: [],
 };
@@ -41,22 +38,16 @@ const BoletaForm = ({ onSubmit }) => {
   };
 
   const handleSelectTrabajador = (e) => {
-    const dniSeleccionado = e.target.value;
-    const trabajador = trabajadores.find((t) => t.dni === dniSeleccionado);
-
-    // Mantenemos la lógica de resetear solo los campos del trabajador
-    // si se deselecciona (o se selecciona la opción vacía).
-    if (trabajador) {
+    const nombreSeleccionado = e.target.value;
+    if (nombreSeleccionado) {
       setFormData({
         ...formData,
-        atendido_por: trabajador.nombre,
-        dni_atiende: trabajador.dni,
+        atendido_por: nombreSeleccionado,
       });
     } else {
       setFormData({
         ...formData,
         atendido_por: "",
-        dni_atiende: "",
       });
     }
   };
@@ -81,12 +72,10 @@ const BoletaForm = ({ onSubmit }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validaciones
     if (
       !formData.cliente_nombre ||
       !formData.cliente_cel ||
-      !formData.atendido_por ||
-      !formData.dni_atiende
+      !formData.atendido_por
     ) {
       alert(
         "Por favor, complete los campos necesarios (Nombre, Celular, y Personal que Atiende)"
@@ -103,10 +92,11 @@ const BoletaForm = ({ onSubmit }) => {
     try {
       const dataToSend = {
         ...formData,
-        // Aseguramos que los campos opcionales vacíos se envíen como null o cadena vacía, según la preferencia del backend
+        dni_atiende: undefined,
         cliente_dni: formData.cliente_dni || null,
         cliente_ruc: formData.cliente_ruc || null,
       };
+      delete dataToSend.dni_atiende;
 
       const result = await crearBoleta(dataToSend);
 
@@ -117,7 +107,6 @@ const BoletaForm = ({ onSubmit }) => {
         window.open(pdfFullUrl, "_blank");
       }
 
-      // 💡 OPTIMIZACIÓN: Resetear el formulario a su estado inicial
       setFormData(INITIAL_FORM_STATE);
       alert("Boleta creada con éxito y formulario reseteado.");
     } catch (err) {
@@ -125,8 +114,6 @@ const BoletaForm = ({ onSubmit }) => {
       alert("Error al crear la boleta. Revise la consola para más detalles.");
     }
   };
-
-  // --- El JSX (la estructura visual) permanece sin cambios funcionales ---
 
   return (
     <main>
@@ -146,7 +133,6 @@ const BoletaForm = ({ onSubmit }) => {
           className="space-y-4 bg-zinc-300"
           id="formulario"
         >
-          {/* Datos del cliente */}
           <div className="flex flex-row gap-3 justify-center items-center p-4">
             <div>
               <input
@@ -193,14 +179,16 @@ const BoletaForm = ({ onSubmit }) => {
             <div className="flex flex-col flex-4/12 gap-5">
               <select
                 onChange={handleSelectTrabajador}
-                // Ajuste para asegurar que el select se resetea visualmente
-                value={formData.dni_atiende}
+                value={formData.atendido_por}
                 className="border p-2 rounded-lg bg-zinc-100 hover:bg-zinc-50 duration-150 w-full "
               >
                 <option value="">Seleccionar trabajador</option>
-                {trabajadores.map((trabajador) => (
-                  <option key={trabajador.dni} value={trabajador.dni}>
-                    {trabajador.nombre} - {trabajador.dni}
+                {trabajadores.map((trabajador, index) => (
+                  <option
+                    key={trabajador.nombre || index}
+                    value={trabajador.nombre}
+                  >
+                    {trabajador.nombre}
                   </option>
                 ))}
               </select>
@@ -213,18 +201,8 @@ const BoletaForm = ({ onSubmit }) => {
                 className="border p-2 rounded-lg bg-zinc-100 hover:bg-zinc-50 duration-150 w-full "
                 readOnly
               />
-              <input
-                type="text"
-                name="dni_atiende"
-                placeholder="DNI de quien atiende"
-                value={formData.dni_atiende}
-                onChange={handleChange}
-                className="border p-2 rounded-lg bg-zinc-100 hover:bg-zinc-50 duration-150 w-full "
-                readOnly
-              />
             </div>
             <div className="flex flex-col flex-8/12">
-              {/* Datos del que atiende */}
               <textarea
                 name="observaciones"
                 placeholder="Observaciones"
@@ -237,14 +215,9 @@ const BoletaForm = ({ onSubmit }) => {
           </div>
           <div className="flex flex-row gap-2.5">
             <div className="flex flex-col flex-5/12">
-              {/* Agregar equipos */}
-              {/* Nota: Para resetear EquipoForm completamente, probablemente necesites pasarle 
-                una prop de 'resetKey' o forzar su remonta. Aquí se asume que al resetear 
-                formData, el componente interno lo refleja. */}
               <EquipoForm onAddEquipo={handleAddEquipo} />
             </div>
             <div className="flex flex-col flex-7/12">
-              {/* Mostrar lista de equipos agregados */}
               <div className="text-center">
                 <h3 className="font-semibold">Equipos agregados:</h3>
                 {formData.equipos.length === 0 && (
