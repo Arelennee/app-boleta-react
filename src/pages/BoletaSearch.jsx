@@ -170,6 +170,7 @@ export default function BoletaSearch() {
                 <th className="p-3 border-b-2">RUC de Cliente</th>{" "}
                 {/* 💡 RUC SEPARADO */}
                 <th className="p-3 border-b-2">Total</th>
+                <th className="p-3 border-b-2">Ver Pdf</th>
               </tr>
             </thead>
             <tbody>
@@ -193,6 +194,20 @@ export default function BoletaSearch() {
                   </td>
                   <td className="p-3 border-b font-semibold text-green-700">
                     S/. {parseFloat(boleta.total).toFixed(2)}
+                  </td>
+                  <td className="p-3 border-b">
+                    {boleta.pdfUrlCompleta ? (
+                      <a
+                        href={boleta.pdfUrlCompleta}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition"
+                      >
+                        Ver PDF
+                      </a>
+                    ) : (
+                      "No disponible"
+                    )}
                   </td>
                 </tr>
               ))}

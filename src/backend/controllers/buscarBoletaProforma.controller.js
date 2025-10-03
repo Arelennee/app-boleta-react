@@ -1,51 +1,54 @@
+// buscarBoletaProforma.controller.js (CÓDIGO AJUSTADO)
 import pool from "../config/db.js";
 
 /**
  * Optimiza la búsqueda flexible de boletas.
- * - Mejora la legibilidad de la construcción de la consulta SQL.
- * - Manejo más limpio de los parámetros de búsqueda.
- * - Usa `COALESCE` para manejar valores nulos en el límite/offset de manera concisa.
+ * Se asegura de devolver la URL completa del PDF (pdf_url) para el frontend.
  */
 export const buscarBoletasFlex = async (req, res) => {
   try {
     const { query, sort, limite, desde, hasta, page = 1 } = req.query;
 
-    // Convertir a número con valor por defecto
     const resultLimit = parseInt(limite) || 50;
     const offset = (parseInt(page) - 1) * resultLimit;
+
+    // 💡 DEFINIMOS LA SENTENCIA BASE DE SELECCIÓN
+    // Usamos COALESCE para manejar el caso de que pdf_url sea NULL.
+    // Concatenamos la URL base (http://localhost:3000) si la columna tiene un valor.
+    // ¡IMPORTANTE!: Reemplaza `http://localhost:3000/` con la URL base de tu servidor de archivos estáticos.
+    const SELECT_FIELDS = `
+      *,
+      CASE
+        WHEN pdf_url IS NOT NULL THEN CONCAT('http://localhost:3000/', pdf_url)
+        ELSE NULL
+      END AS pdfUrlCompleta
+    `;
 
     // 1. Manejo del caso por defecto (sin búsqueda)
     if (!query || query.trim() === "") {
       const [rows] = await pool.query(
-        // Se mantiene la ordenación por defecto, si no se especifica 'sort'
-        `SELECT * FROM boleta ORDER BY fecha_emision ${
+        // 💡 CAMBIO AQUÍ: Usamos la sentencia SELECT_FIELDS
+        `SELECT ${SELECT_FIELDS} FROM boleta ORDER BY fecha_emision ${
           sort === "asc" ? "ASC" : "DESC"
         } LIMIT ? OFFSET ?`,
-        [resultLimit, offset] // Se aplican el límite y el offset por defecto
+        [resultLimit, offset]
       );
       return res.json(rows);
     }
 
-    // 2. Preparación de términos y parámetros
+    // 2. Preparación de términos y parámetros (Sin cambios)
     const terms = query
       .trim()
       .split(/\s+/)
       .filter((t) => t.length > 0);
-    let sql = `SELECT * FROM boleta`;
+    // 💡 CAMBIO AQUÍ: Usamos la sentencia SELECT_FIELDS
+    let sql = `SELECT ${SELECT_FIELDS} FROM boleta`;
     const params = [];
 
-    // 3. Construcción de la cláusula WHERE (Busca cada término en todos los campos)
+    // 3. Construcción de la cláusula WHERE (Sin cambios en WHERE)
     if (terms.length > 0) {
-      // Se crea una condición global para asegurar que TODAS las cláusulas de término
-      // y la cláusula de fecha (si existe) se unan correctamente.
       const termConditions = terms.map((term) => {
         const likeTerm = `%${term}%`;
-        // El problema potencial aquí es que, al concatenar múltiples ORs en un array
-        // y luego unirlos con AND, se pierde la agrupación por término.
-        // La lógica correcta es: (T1_DNI OR T1_NOMBRE OR T1_BOLETA) AND (T2_DNI OR T2_NOMBRE OR T2_BOLETA)...
-        // El código original ya hacía esto, solo mejoramos la construcción del array de parámetros.
-
-        // El patrón es: (C1 LIKE ? OR C2 LIKE ? OR C3 LIKE ? OR C4 LIKE ?)
         params.push(likeTerm, likeTerm, likeTerm, likeTerm);
         return `
           (cliente_dni LIKE ? 
@@ -58,22 +61,21 @@ export const buscarBoletasFlex = async (req, res) => {
       sql += ` WHERE ${termConditions.join(" AND ")}`;
     }
 
-    // 4. Se añaden las cláusulas de fecha
+    // 4. Se añaden las cláusulas de fecha (Sin cambios)
     if (desde && hasta) {
-      // Si ya hay una cláusula WHERE de términos, añadimos AND
       sql += terms.length > 0 ? " AND " : " WHERE ";
       sql += " fecha_emision BETWEEN ? AND ?";
       params.push(desde, hasta);
     }
 
-    // 5. Ordenamiento
+    // 5. Ordenamiento (Sin cambios)
     sql += ` ORDER BY fecha_emision ${sort === "asc" ? "ASC" : "DESC"}`;
 
-    // 6. Paginación
+    // 6. Paginación (Sin cambios)
     sql += " LIMIT ? OFFSET ?";
     params.push(resultLimit, offset);
 
-    // 7. Ejecución de la consulta
+    // 7. Ejecución de la consulta (Sin cambios)
     const [rows] = await pool.query(sql, params);
 
     if (rows.length === 0) {
