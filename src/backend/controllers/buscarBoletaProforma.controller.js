@@ -12,14 +12,15 @@ export const buscarBoletasFlex = async (req, res) => {
     const resultLimit = parseInt(limite) || 50;
     const offset = (parseInt(page) - 1) * resultLimit;
 
+    const apiHost = process.env.VITE_API_HOST || 'http://localhost:3000';
+
     // 💡 DEFINIMOS LA SENTENCIA BASE DE SELECCIÓN
     // Usamos COALESCE para manejar el caso de que pdf_url sea NULL.
-    // Concatenamos la URL base (http://localhost:3000) si la columna tiene un valor.
-    // ¡IMPORTANTE!: Reemplaza `http://localhost:3000/` con la URL base de tu servidor de archivos estáticos.
+    // Concatenamos la URL base desde la variable de entorno VITE_API_HOST.
     const SELECT_FIELDS = `
       *,
       CASE
-        WHEN pdf_url IS NOT NULL THEN CONCAT('http://localhost:3000/', pdf_url)
+        WHEN pdf_url IS NOT NULL THEN CONCAT('${apiHost}/', pdf_url)
         ELSE NULL
       END AS pdfUrlCompleta
     `;
