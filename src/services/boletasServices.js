@@ -1,8 +1,11 @@
 // boletasServices.js (CÓDIGO CORREGIDO)
-const API_URL_CREAR_BOLETA = "http://localhost:3000/api/crearBoleta";
-// 💡 CORREGIDO: Cambiamos la ruta a '/api/buscarBoletas' (plural) para resolver el 404
-const API_URL_BUSCAR_BOLETAS = "http://localhost:3000/api/buscarBoleta";
-
+const API_URL_CREAR_BOLETA = `${import.meta.env.VITE_API_HOST}/api/crearBoleta`;
+const API_URL_BUSCAR_BOLETAS = `${
+  import.meta.env.VITE_API_HOST
+}/api/buscarBoleta`;
+const API_URL_EQUIPOS_CATALOGO = `${
+  import.meta.env.VITE_API_HOST
+}/api/equiposCatalogo`;
 // Nota: Las otras funciones (crearBoleta, obtenerCatalogoEquipos, obtenerBoletas)
 // permanecen sin cambios.
 
@@ -65,7 +68,7 @@ export async function crearBoleta(data) {
 
 export async function obtenerCatalogoEquipos() {
   try {
-    const res = await fetch("http://localhost:3000/api/equiposCatalogo");
+    const res = await fetch(API_URL_EQUIPOS_CATALOGO);
     if (!res.ok) {
       throw new Error("Error al obtener los equipos");
     }

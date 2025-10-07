@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:3000/api/obtenerEquipos";
+const API_URL = `${import.meta.env.VITE_API_HOST}/api/obtenerEquipos`;
 
 const getEquiposCatalogo = async () => {
   try {
