@@ -1,6 +1,9 @@
 // buscarBoletaProforma.controller.js (CÓDIGO AJUSTADO)
 import pool from "../config/db.js";
 
+import dotenv from "dotenv"
+
+dotenv.config();
 /**
  * Optimiza la búsqueda flexible de boletas.
  * Se asegura de devolver la URL completa del PDF (pdf_url) para el frontend.

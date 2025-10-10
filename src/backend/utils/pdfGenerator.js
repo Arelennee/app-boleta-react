@@ -4,6 +4,8 @@ import fs from "fs";
 import path from "path";
 import imagen1 from "./image.js";
 import dotenv from "dotenv";
+import { fileURLToPath } from "url";
+
 dotenv.config();
 
 const formatDateTime = (dateString) => {
@@ -32,8 +34,10 @@ const getEquipmentNameById = (id) => {
 export const generarPDFBoleta = (boletaData) => {
   return new Promise((resolve, reject) => {
     try {
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
       const filename = `${boletaData.numero_boleta}.pdf`;
-      const filePath = path.join("pdfs", filename);
+      const filePath = path.join(__dirname, "..", "pdfs", filename);
 
       const doc = new PDFDocument({
         size: "A4",
@@ -114,24 +118,49 @@ export const generarPDFBoleta = (boletaData) => {
 
       doc.y = clienteRectY + 40 + 10;
 
-      // --- Sección de Observaciones (sin cambios) ---
+      // --- Sección de Observaciones (DINÁMICA) ---
       const obsRectY = doc.y;
-      doc.rect(doc.page.margins.left, obsRectY, docWidth, 40).stroke();
-      if (boletaData.observaciones) {
-        doc
-          .fontSize(10)
-          .text("Observaciones:", doc.page.margins.left + 5, obsRectY + 5);
-        doc.text(
-          boletaData.observaciones,
-          doc.page.margins.left + 5,
-          obsRectY + 20
-        );
+      let obsRectHeight;
+
+      const textOptions = {
+        width: docWidth - 10,
+        align: 'left'
+      };
+
+      if (boletaData.observaciones && boletaData.observaciones.trim() !== '') {
+        // 1. Medir la altura que necesitará el texto (versión definitiva)
+        const lines = boletaData.observaciones.split('\n');
+        let totalTextHeight = 0;
+        // Se calcula la altura de una línea estándar (incluso si está vacía)
+        const lineHeight = doc.heightOfString(' ', textOptions);
+
+        lines.forEach(line => {
+          if (line.trim() === '') {
+            // Si la línea está vacía (un "Enter"), sumar la altura de una línea
+            totalTextHeight += lineHeight;
+          } else {
+            // Si la línea tiene texto, medir su altura (que puede ser mayor si hay ajuste de línea)
+            totalTextHeight += doc.heightOfString(line, textOptions);
+          }
+        });
+
+        obsRectHeight = totalTextHeight + 30; // Altura total del texto + padding
+
+        // 2. Dibujar el cuadro con la altura calculada
+        doc.rect(doc.page.margins.left, obsRectY, docWidth, obsRectHeight).stroke();
+
+        // 3. Escribir el texto
+        doc.fontSize(10).text("Observaciones:", doc.page.margins.left + 5, obsRectY + 5);
+        doc.text(boletaData.observaciones, doc.page.margins.left + 5, obsRectY + 20, textOptions);
       } else {
-        doc
-          .fontSize(10)
-          .text("Observaciones: N/A", doc.page.margins.left + 5, obsRectY + 5);
+        // Si no hay observaciones, dibujar un cuadro más pequeño
+        obsRectHeight = 20;
+        doc.rect(doc.page.margins.left, obsRectY, docWidth, obsRectHeight).stroke();
+        doc.fontSize(10).text("Observaciones: N/A", doc.page.margins.left + 5, obsRectY + 5);
       }
-      doc.y = obsRectY + 40 + 10;
+
+      // 4. Ajustar la posición 'y' para el resto del documento, con espaciado inferior
+      doc.y = obsRectY + obsRectHeight + 10;
 
       // --- Tabla de Equipos y Servicios (sin cambios) ---
       const tableTop = doc.y;
@@ -251,6 +280,20 @@ export const generarPDFBoleta = (boletaData) => {
       doc
         .fontSize(12)
         .text(totalText, doc.page.margins.left, currentY, { align: "right" });
+
+      // --- Disclaimer al final de la página ---
+      doc
+        .fontSize(10)
+        .font("Helvetica-Oblique")
+        .text(
+          "Todo recojo y/o reclamo tiene que ser con boleta en mano",
+          doc.page.margins.left,
+          doc.page.height - 50, // Posición vertical fija en la parte inferior
+          {
+            align: "center",
+            width: docWidth
+          }
+        );
 
       doc.end();
       stream.on("finish", () => resolve(filename));

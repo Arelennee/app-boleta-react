@@ -18,11 +18,15 @@ app.use(cors());
 app.use(json());
 app.use(morgan("dev"));
 
+// Rutas API
 app.use("/api", boletasProformaRoutes);
 app.use("/api", equiposRoutes);
 app.use("/api", trabajadoresRoutes);
-app.use("/pdfs", express.static(path.join(__dirname, "../../pdfs")));
+
+// Servir PDFs directamente desde la carpeta "pdfs" del backend
+app.use("/pdfs", express.static(path.join(__dirname, "pdfs")));
 
 app.listen(PORT, () => {
-  console.log("Server running on port: ", PORT);
+  console.log("Server running on port:", PORT);
 });
+
