@@ -73,7 +73,7 @@ export const generarPDFBoleta = (boletaData) => {
         .lineTo(boxX + boxWidth, boxY + 25)
         .stroke();
 
-      doc.fontSize(12).text(`Boleta-${boletaData.tipo}`, boxX, boxY + 30, {
+      doc.fontSize(12).text(`${boletaData.tipo}`, boxX, boxY + 30, {
         width: boxWidth,
         align: "center",
       });
@@ -204,68 +204,87 @@ export const generarPDFBoleta = (boletaData) => {
         .lineTo(doc.page.margins.left + docWidth, currentY)
         .stroke();
 
-      // Contenido de la tabla por cada equipo y sus servicios
+      // Contenido de la tabla por cada equipo y sus servicios (AJUSTADO PARA ALTURA DINÁMICA)
       boletaData.equipos.forEach((eq) => {
-        const startOfEquipmentRow = currentY;
+        const rowTop = currentY;
+        const PADDING = 5;
 
+        // Guardar la posición Y inicial para la columna de servicios
+        const servicesInitialY = rowTop + PADDING;
+        let servicesCurrentY = servicesInitialY;
+
+        // Dibujar la columna de servicios (2 y 3) y calcular su altura total
+        let equipoTotal = 0;
+        eq.servicios.forEach((srv) => {
+          equipoTotal += parseFloat(srv.precio_servicio);
+          const serviceNameHeight = doc.heightOfString(srv.nombre_servicio, {
+            width: colWidths[1] - PADDING * 2,
+          });
+
+          doc.text(
+            srv.nombre_servicio,
+            doc.page.margins.left + colWidths[0] + PADDING,
+            servicesCurrentY,
+            { width: colWidths[1] - PADDING * 2 }
+          );
+          doc.text(
+            `S/ ${parseFloat(srv.precio_servicio).toFixed(2)}`,
+            doc.page.margins.left + colWidths[0] + colWidths[1] + PADDING,
+            servicesCurrentY,
+            { width: colWidths[2] - PADDING * 2 }
+          );
+          servicesCurrentY += serviceNameHeight; // Incrementar Y para el siguiente servicio
+        });
+        const servicesColumnEnd = servicesCurrentY;
+
+        // Dibujar la columna de descripción (1)
         const nombreEquipo = getEquipmentNameById(
           Number(eq.id_equipo_catalogo)
         );
-
         doc
           .fontSize(10)
           .font("Helvetica-Bold")
-          .text(`${nombreEquipo}`, doc.page.margins.left + 5, currentY + 5, {
-            width: colWidths[0] - 10,
-          });
-
+          .text(
+            nombreEquipo,
+            doc.page.margins.left + PADDING,
+            rowTop + PADDING,
+            {
+              width: colWidths[0] - PADDING * 2,
+            }
+          );
         doc
           .font("Helvetica")
           .text(
             `Descripción: ${eq.descripcion_equipo}`,
-            doc.page.margins.left + 5,
-            currentY + 20,
-            { width: colWidths[0] - 10 }
+            doc.page.margins.left + PADDING,
+            doc.y, // Continuar donde terminó el texto anterior
+            { width: colWidths[0] - PADDING * 2 }
           );
+        const descriptionColumnEnd = doc.y;
 
-        let equipoTotal = 0;
-
-        eq.servicios.forEach((srv) => {
-          equipoTotal += parseFloat(srv.precio_servicio);
-        });
-
-        eq.servicios.forEach((srv, index) => {
-          const serviceY = startOfEquipmentRow + 35 + index * 15;
-          doc.text(
-            srv.nombre_servicio,
-            doc.page.margins.left + colWidths[0] + 5,
-            serviceY,
-            { width: colWidths[1] - 10 }
-          );
-          doc.text(
-            `S/ ${parseFloat(srv.precio_servicio).toFixed(2)}`,
-            doc.page.margins.left + colWidths[0] + colWidths[1] + 5,
-            serviceY,
-            { width: colWidths[2] - 10 }
-          );
-        });
-
-        const totalEquipoY = startOfEquipmentRow + 35;
+        // Dibujar la columna de total (4)
         doc.text(
           `S/ ${equipoTotal.toFixed(2)}`,
           doc.page.margins.left +
             colWidths[0] +
             colWidths[1] +
             colWidths[2] +
-            5,
-          totalEquipoY,
-          { width: colWidths[3] - 10 }
+            PADDING,
+          rowTop + PADDING, // Alinear con la parte superior de la fila
+          { width: colWidths[3] - PADDING * 2 }
         );
 
-        currentY = Math.max(
-          doc.y,
-          startOfEquipmentRow + 35 + eq.servicios.length * 15
-        );
+        // Determinar la altura final de la fila y la nueva posición Y
+        currentY = Math.max(descriptionColumnEnd, servicesColumnEnd) + PADDING * 2;
+
+        // Manejo de salto de página
+        if (currentY > doc.page.height - doc.page.margins.bottom - 50) {
+          doc.addPage();
+          currentY = doc.page.margins.top;
+          // NOTA: Faltaría redibujar los encabezados de la tabla aquí si ocurre un salto.
+        }
+
+        // Dibujar la línea separadora
         doc
           .moveTo(doc.page.margins.left, currentY)
           .lineTo(doc.page.margins.left + docWidth, currentY)
