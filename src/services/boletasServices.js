@@ -25,7 +25,7 @@ export async function buscarBoletas(params) {
       try {
         const err = await res.json();
         throw new Error(
-          err.message || `Error al buscar boletas (HTTP ${res.status})`
+          err.message || `Error al buscar boletas (HTTP ${res.status})`,
         );
       } catch (e) {
         // Si falla el .json() (ej. el error es HTML o texto plano), lanzamos el error de estado
@@ -41,10 +41,6 @@ export async function buscarBoletas(params) {
     throw e;
   }
 }
-
-// =========================================================================
-// MANTENIENDO LAS FUNCIONES ORIGINALES RESTANTES
-// =========================================================================
 
 export async function crearBoleta(data) {
   try {

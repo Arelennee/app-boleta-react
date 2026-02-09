@@ -170,6 +170,7 @@ export default function BoletaSearch() {
                 <th className="p-3 border-b-2">RUC de Cliente</th>{" "}
                 {/* 💡 RUC SEPARADO */}
                 <th className="p-3 border-b-2">Total</th>
+                <th className="p-3 border-b-2">Teléfono Cliente</th>
                 <th className="p-3 border-b-2">Ver Pdf</th>
               </tr>
             </thead>
@@ -194,6 +195,9 @@ export default function BoletaSearch() {
                   </td>
                   <td className="p-3 border-b font-semibold text-green-700">
                     S/. {parseFloat(boleta.total).toFixed(2)}
+                  </td>
+                  <td className="p-3 border-b">
+                    {boleta.cliente_cel || "N/A"}
                   </td>
                   <td className="p-3 border-b">
                     {boleta.pdfUrlCompleta ? (

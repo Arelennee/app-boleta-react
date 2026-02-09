@@ -70,7 +70,7 @@ export const crearBoletaProforma = async (req, res) => {
         total,
         numeroBoleta,
         observaciones || null,
-      ]
+      ],
     );
 
     const boletaId = boletaResult.insertId; // 4. Inserción Masiva de Equipos y Servicios (Sin cambios)
@@ -86,7 +86,7 @@ export const crearBoletaProforma = async (req, res) => {
     if (equipoValues.length > 0) {
       const [equipoInsertResult] = await connection.query(
         "INSERT INTO boleta_equipo (id_boleta, id_equipo_catalogo, descripcion_equipo) VALUES ?",
-        [equipoValues]
+        [equipoValues],
       );
 
       const primerEquipoId = equipoInsertResult.insertId;
@@ -105,14 +105,14 @@ export const crearBoletaProforma = async (req, res) => {
       if (serviciosData.length > 0) {
         await connection.query(
           "INSERT INTO boleta_equipo_servicio (id_boleta_equipo, nombre_servicio, precio_servicio) VALUES ?",
-          [serviciosData]
+          [serviciosData],
         );
       }
     } // 5. Obtención de la fecha (Sin cambios)
 
     const [boletaFinalResult] = await connection.query(
       "SELECT fecha_emision FROM boleta WHERE id_boleta = ?",
-      [boletaId]
+      [boletaId],
     );
     const fecha_emision = boletaFinalResult[0].fecha_emision; // 6. Preparación de la Data para el PDF (AJUSTADO)
 
@@ -150,7 +150,7 @@ export const crearBoletaProforma = async (req, res) => {
 
     await connection.query(
       "UPDATE boleta SET pdf_url = ? WHERE id_boleta = ?",
-      [pdfRelativePath, boletaId]
+      [pdfRelativePath, boletaId],
     );
 
     await connection.commit(); // 8. Preparación de la respuesta (Sin cambios)
@@ -188,7 +188,7 @@ export const obtenerBoletaProforma = async (req, res) => {
     // 1. Consulta Consolidada: Boleta + Equipos
     const [rows] = await pool.query(
       `SELECT
-            b.id_boleta, b.tipo, b.cliente_nombre, b.cliente_dni, b.cliente_ruc, b.empresa_ruc, b.atendido_por, b.dni_atiende, b.subtotal, b.total, b.numero_boleta, b.observaciones, b.fecha_emision,
+            b.id_boleta, b.tipo, b.cliente_nombre, b.cliente_dni, b.cliente_ruc, b.empresa_ruc, b.atendido_por, b.subtotal, b.total, b.numero_boleta, b.observaciones, b.cliente_cel, b.fecha_emision,
             be.id_boleta_equipo,
             be.id_equipo_catalogo,
             be.descripcion_equipo,
@@ -197,7 +197,7 @@ export const obtenerBoletaProforma = async (req, res) => {
         LEFT JOIN boleta_equipo be ON b.id_boleta = be.id_boleta
         LEFT JOIN equipo_catalogo ec ON be.id_equipo_catalogo = ec.id_equipo_catalogo
         WHERE b.numero_boleta = ? AND b.tipo = "PROFORMA"`,
-      [numero_boleta]
+      [numero_boleta],
     );
 
     if (rows.length === 0 || !rows[0].id_boleta) {
@@ -232,7 +232,7 @@ export const obtenerBoletaProforma = async (req, res) => {
       // 3. Consulta Única para todos los Servicios
       const [serviciosRows] = await pool.query(
         "SELECT id_boleta_equipo, nombre_servicio, precio_servicio FROM boleta_equipo_servicio WHERE id_boleta_equipo IN (?)",
-        [equipoIds]
+        [equipoIds],
       );
 
       // Mapeo de servicios
