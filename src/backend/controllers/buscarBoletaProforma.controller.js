@@ -1,7 +1,7 @@
 // buscarBoletaProforma.controller.js (CÓDIGO AJUSTADO)
 import pool from "../config/db.js";
 
-import dotenv from "dotenv"
+import dotenv from "dotenv";
 
 dotenv.config();
 /**
@@ -15,7 +15,7 @@ export const buscarBoletasFlex = async (req, res) => {
     const resultLimit = parseInt(limite) || 50;
     const offset = (parseInt(page) - 1) * resultLimit;
 
-    const apiHost = process.env.VITE_API_HOST || 'http://localhost:3000';
+    const apiHost = process.env.VITE_API_HOST || "http://localhost:3000";
 
     // 💡 DEFINIMOS LA SENTENCIA BASE DE SELECCIÓN
     // Usamos COALESCE para manejar el caso de que pdf_url sea NULL.
@@ -35,7 +35,7 @@ export const buscarBoletasFlex = async (req, res) => {
         `SELECT ${SELECT_FIELDS} FROM boleta ORDER BY fecha_emision ${
           sort === "asc" ? "ASC" : "DESC"
         } LIMIT ? OFFSET ?`,
-        [resultLimit, offset]
+        [resultLimit, offset],
       );
       return res.json(rows);
     }
@@ -53,12 +53,13 @@ export const buscarBoletasFlex = async (req, res) => {
     if (terms.length > 0) {
       const termConditions = terms.map((term) => {
         const likeTerm = `%${term}%`;
-        params.push(likeTerm, likeTerm, likeTerm, likeTerm);
+        params.push(likeTerm, likeTerm, likeTerm, likeTerm, likeTerm);
         return `
-          (cliente_dni LIKE ? 
-          OR cliente_nombre LIKE ? 
-          OR numero_boleta LIKE ? 
-          OR total LIKE ?)
+          (cliente_dni LIKE ?
+          OR cliente_nombre LIKE ?
+          OR numero_boleta LIKE ?
+          OR total LIKE ?
+          OR cliente_cel LIKE ?)
         `;
       });
 
